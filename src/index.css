@@ -27,10 +27,31 @@
   }
 }
 
-.masonry-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
+.explore-grid {
+  column-width: 20rem;
+  column-gap: 1.5rem;
+  width: 100%;
+}
+
+.explore-grid-item {
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 1.5rem;
+  break-inside: avoid;
+}
+
+@media (max-width: 1024px) {
+  .explore-grid {
+    column-width: 16rem;
+    column-gap: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .explore-grid {
+    column-width: 14rem;
+    column-gap: 1rem;
+  }
 }
 
 .editorial-gradient {

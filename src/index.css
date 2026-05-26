@@ -1,10 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;700;800&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Michroma&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,100..900;1,100..900&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-headline: "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-label: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline: "Michroma", sans-serif;
+  --font-body: "Saira", sans-serif;
+  --font-label: "Saira", sans-serif;
 
   --color-background: #111125;
   --color-secondary: #ddb7ff;
@@ -21,29 +22,48 @@
     @apply bg-background text-[#e2e0fc] font-body antialiased;
     -ms-overflow-style: none;
     scrollbar-width: none;
+    font-family: "Saira", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+    font-variation-settings: "wdth" 100;
   }
   body::-webkit-scrollbar {
     display: none;
   }
 }
 
+.michroma-regular {
+  font-family: "Michroma", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.saira-regular {
+  font-family: "Saira", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  font-variation-settings: "wdth" 100;
+}
+
 .explore-grid {
-  column-width: 20rem;
-  column-gap: 1.5rem;
+  column-width: 18rem;
+  column-gap: 1.25rem;
   width: 100%;
 }
 
 .explore-grid-item {
   display: inline-block;
   width: 100%;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   break-inside: avoid;
 }
 
 @media (max-width: 1024px) {
   .explore-grid {
-    column-width: 16rem;
-    column-gap: 1.25rem;
+    column-width: 14rem;
+    column-gap: 1rem;
   }
 }
 

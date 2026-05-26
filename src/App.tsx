@@ -11,139 +11,30 @@ import {
   Shirt, 
   Camera, 
   User,
-  ChevronRight
+  ChevronRight,
+  Edit3,
+  Moon,
+  Sun
 } from 'lucide-react';
 
 const CATEGORIES = [
+  'Alternativo',
+  'Y2K',
+  'Streetwear',
+  'E-Girl',
+  'Gotico',
+  'Grunge',
+  'Vintage',
   'Deportivo',
-  'Casual',
   'Formal',
-  'Vanguardia',
-  'Minimalista'
+  'Old Money'
 ];
 
-const ITEMS = [
-  // Deportivo - 6 imágenes
-  {
-    id: 1,
-    category: 'Deportivo',
-    url: 'https://i.pinimg.com/236x/c6/8b/11/c68b11955293533678983930b5a98586.jpg',
-    description: 'Look deportivo para hombre con estilo urbano'
-  },
-  {
-    id: 2,
-    category: 'Deportivo',
-    url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSaQcV4xCXssGQ4RCeR2gcPbtbq_gPwwbfNNA&s',
-    description: 'Conjunto deportivo masculino en colores vibrantes'
-  },
-  {
-    id: 3,
-    category: 'Deportivo',
-    url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSK_SZUAdbe3l-OCtxJc-IW6G79VH68M96d-A&s',
-    description: 'Estilo atlético con prendas modernas'
-  },
-  {
-    id: 4,
-    category: 'Deportivo',
-    url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS2-mjYTGvLvq9zRJsDlPw2JEPbx_VtaSj4_w&s',
-    description: 'Combinación deportiva moderna para el día a día'
-  },
-  {
-    id: 5,
-    category: 'Deportivo',
-    url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSjU4g0pC5vMjRn3Mw0aTN1VTXwJoFHRwNTAQ&s',
-    description: 'Outfit deportivo contemporáneo y funcional'
-  },
-  {
-    id: 6,
-    category: 'Deportivo',
-    url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSpVTOn7CUT8fbrUx3jbPqH4zVjj3b7Tg5tWQ&s',
-    description: 'Look atlético con estética limpia y elegante'
-  },
-  
-  // Casual - 3 imágenes
-  {
-    id: 7,
-    category: 'Casual',
-    url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRQyYpQ-M8V0JvT0Z0_8Z0Z0Z0Z0Z&s',
-    description: 'Jeans con sudadera casual y sneakers'
-  },
-  {
-    id: 8,
-    category: 'Casual',
-    url: 'https://i.pinimg.com/236x/b3/8e/f6/b38ef6d5f8c5a2e1b9d8e7f6c5b4a3d2.jpg',
-    description: 'Outfit casual contemporáneo para paseos'
-  },
-  {
-    id: 9,
-    category: 'Casual',
-    url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaQcV4xCXssGQ4RCeR2gcPbtbq_gPwwbfNNA&s',
-    description: 'Look casual con toque minimalista'
-  },
-  
-  // Formal - 3 imágenes
-  {
-    id: 10,
-    category: 'Formal',
-    url: 'https://i.pinimg.com/236x/d8/7c/5b/d87c5b4a3c2b1a0f9e8d7c6b5a4f3e2d.jpg',
-    description: 'Traje formal gris elegante'
-  },
-  {
-    id: 11,
-    category: 'Formal',
-    url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTmQcV4xCXssGQ4RCeR2gcPbtbq_gPwwbfNNA&s',
-    description: 'Corbata y camisa blanca profesional'
-  },
-  {
-    id: 12,
-    category: 'Formal',
-    url: 'https://i.pinimg.com/236x/a1/b2/c3/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6.jpg',
-    description: 'Blazer negro con pantalón vestir'
-  },
-  
-  // Vanguardia - 3 imágenes
-  {
-    id: 13,
-    category: 'Vanguardia',
-    url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSnQcV4xCXssGQ4RCeR2gcPbtbq_gPwwbfNNA&s',
-    description: 'Moda experimental con cortes asimétricos'
-  },
-  {
-    id: 14,
-    category: 'Vanguardia',
-    url: 'https://i.pinimg.com/236x/e9/f8/g7/e9f8g7h6i5j4k3l2m1n0o9p8q7r6s5t4.jpg',
-    description: 'Look vanguardista con colores neón'
-  },
-  {
-    id: 15,
-    category: 'Vanguardia',
-    url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvQcV4xCXssGQ4RCeR2gcPbtbq_gPwwbfNNA&s',
-    description: 'Estilo futurista con prendas innovadoras'
-  },
-  
-  // Minimalista - 3 imágenes
-  {
-    id: 16,
-    category: 'Minimalista',
-    url: 'https://i.pinimg.com/236x/c1/d2/e3/c1d2e3f4g5h6i7j8k9l0m1n2o3p4q5r6.jpg',
-    description: 'Blanco y negro puro minimalismo'
-  },
-  {
-    id: 17,
-    category: 'Minimalista',
-    url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSyQcV4xCXssGQ4RCeR2gcPbtbq_gPwwbfNNA&s',
-    description: 'Colores neutros con líneas limpias'
-  },
-  {
-    id: 18,
-    category: 'Minimalista',
-    url: 'https://i.pinimg.com/236x/f5/g6/h7/f5g6h7i8j9k0l1m2n3o4p5q6r7s8t9u0.jpg',
-    description: 'Simplicidad elegante en prendas básicas'
-  }
-];
+// Items cleared — new categories will be populated later
+const ITEMS: { id: number; category: string; url?: string; description?: string }[] = [];
 
 export default function App() {
-  const [activeCategory, setActiveCategory] = useState('Deportivo');
+  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
   const [activeNav, setActiveNav] = useState('compass');
   const [menuOpen, setMenuOpen] = useState(false);
   const [submenuOpen, setSubmenuOpen] = useState(false);
@@ -219,11 +110,11 @@ export default function App() {
                 className="absolute left-0 top-full mt-3 min-w-[18rem] w-[calc(100vw-2rem)] max-w-[22rem] rounded-3xl border border-white/10 bg-surface-container/95 p-4 shadow-2xl backdrop-blur-xl sm:w-auto"
               >
                 <p className="text-xs uppercase tracking-[0.35em] text-secondary/80 mb-3">
-                  Navegación
+                  Menu
                 </p>
                 <button
                   onClick={() => { setActiveNav('compass'); setMenuOpen(false); }}
-                  className={`w-full rounded-2xl px-4 py-3 flex items-center gap-3 text-left transition ${activeNav === 'compass' ? 'bg-secondary-container text-secondary' : 'hover:bg-surface-container-high text-primary'}`}
+                  className={`w-full rounded-2xl px-4 py-3 flex items-center gap-3 text-left transition font-body ${activeNav === 'compass' ? 'bg-secondary-container text-secondary' : 'hover:bg-surface-container-high text-primary'}`}
                 >
                   <Compass size={18} />
                   Explorar
@@ -235,7 +126,7 @@ export default function App() {
                 >
                   <div
                     onClick={() => setSubmenuOpen(prev => !prev)}
-                    className={`w-full flex items-center justify-between gap-3 rounded-2xl px-4 py-3 ${submenuOpen ? 'bg-secondary-container text-secondary' : 'hover:bg-surface-container-high text-primary'}`}
+                    className={`w-full flex items-center justify-between gap-3 rounded-2xl px-4 py-3 font-body ${submenuOpen ? 'bg-secondary-container text-secondary' : 'hover:bg-surface-container-high text-primary'}`}
                   >
                     <div className="flex items-center gap-3">
                       <Shirt size={18} />
@@ -248,13 +139,13 @@ export default function App() {
                     <div className="mt-2 ml-6 flex flex-col gap-2">
                       <button
                         onClick={() => { setActiveNav('mi-ropa'); setMenuOpen(false); setSubmenuOpen(false); }}
-                        className={`w-full text-left rounded-xl px-3 py-2 transition ${activeNav === 'mi-ropa' ? 'bg-surface-container-high text-secondary' : 'text-primary hover:bg-surface-container'}`}
+                        className={`w-full text-left rounded-xl px-3 py-2 transition font-body ${activeNav === 'mi-ropa' ? 'bg-surface-container-high text-secondary' : 'text-primary hover:bg-surface-container'}`}
                       >
                         Mi ropa
                       </button>
                       <button
                         onClick={() => { setActiveNav('mis-outfits'); setMenuOpen(false); setSubmenuOpen(false); }}
-                        className={`w-full text-left rounded-xl px-3 py-2 transition ${activeNav === 'mis-outfits' ? 'bg-surface-container-high text-secondary' : 'text-primary hover:bg-surface-container'}`}
+                        className={`w-full text-left rounded-xl px-3 py-2 transition font-body ${activeNav === 'mis-outfits' ? 'bg-surface-container-high text-secondary' : 'text-primary hover:bg-surface-container'}`}
                       >
                         Mis outfits
                       </button>
@@ -263,14 +154,14 @@ export default function App() {
                 </div>
                 <button
                   onClick={() => { setActiveNav('camera'); setMenuOpen(false); }}
-                  className={`w-full rounded-2xl px-4 py-3 flex items-center gap-3 text-left transition ${activeNav === 'camera' ? 'bg-secondary-container text-secondary' : 'hover:bg-surface-container-high text-primary'}`}
+                  className={`w-full rounded-2xl px-4 py-3 flex items-center gap-3 text-left transition font-body ${activeNav === 'camera' ? 'bg-secondary-container text-secondary' : 'hover:bg-surface-container-high text-primary'}`}
                 >
                   <Camera size={18} />
                   Subir
                 </button>
                 <button
                   onClick={() => { setActiveNav('user'); setMenuOpen(false); }}
-                  className={`w-full rounded-2xl px-4 py-3 flex items-center gap-3 text-left transition ${activeNav === 'user' ? 'bg-secondary-container text-secondary' : 'hover:bg-surface-container-high text-primary'}`}
+                  className={`w-full rounded-2xl px-4 py-3 flex items-center gap-3 text-left transition font-body ${activeNav === 'user' ? 'bg-secondary-container text-secondary' : 'hover:bg-surface-container-high text-primary'}`}
                 >
                   <User size={18} />
                   Perfil
@@ -282,33 +173,54 @@ export default function App() {
         <h1 className="font-headline font-black text-4xl sm:text-5xl md:text-6xl text-secondary tracking-tighter uppercase">
           LOOKIA
         </h1>
+        <div className="absolute right-4 sm:right-6">
+          <button
+            onClick={() => {
+              // TODO: Implement dark/light mode toggle
+              console.log('Theme toggle clicked');
+            }}
+            className="p-2 -mr-2 text-secondary hover:bg-surface-container rounded-full transition-colors active:scale-95 duration-150"
+            aria-label="Cambiar modo"
+          >
+            <Moon size={24} />
+          </button>
+        </div>
       </header>
 
       {/* Main Content */}
-      <main className="pt-0 pb-24 sm:pb-32 px-4 sm:px-6 lg:px-8 max-w-[1440px] mx-auto editorial-gradient">
+      <main className={`${activeNav === 'camera' ? 'pt-0 pb-0 px-0 w-screen' : 'pt-0 pb-20 sm:pb-28 px-4 sm:px-5 lg:px-6 max-w-[1280px]'} mx-auto editorial-gradient`}>
         {activeNav === 'camera' ? (
-          <section className="space-y-6">
-            <div className="rounded-3xl overflow-hidden bg-surface-container shadow-2xl">
+          <section className="relative w-screen h-[calc(100vh-140px)] sm:h-[calc(100vh-160px)] flex items-center justify-center px-4">
+            <div className="w-full h-full rounded-3xl overflow-hidden bg-black">
               <video
                 ref={videoRef}
-                className="w-full h-[240px] sm:h-[300px] md:h-[360px] lg:h-[420px] object-cover bg-black"
+                className="w-full h-full object-cover bg-black"
                 autoPlay
                 muted
                 playsInline
               />
             </div>
-            <div className="rounded-3xl bg-surface-container p-6 shadow-2xl">
-              <p className="font-body text-primary text-sm leading-6">
-                Subir tu atuendo. Permite el acceso en el navegador para capturar y subir tu look.
-              </p>
-              {cameraError ? (
-                <p className="mt-4 text-sm text-error">{cameraError}</p>
-              ) : (
-                <p className="mt-4 text-sm text-secondary">
-                  Si no ves imagen, verifica los permisos de cámara del navegador.
-                </p>
-              )}
-            </div>
+            <button
+              onClick={() => {
+                // TODO: Implement photo capture functionality
+                if (videoRef.current && videoRef.current.srcObject instanceof MediaStream) {
+                  const canvas = document.createElement('canvas');
+                  const context = canvas.getContext('2d');
+                  if (context && videoRef.current?.videoWidth && videoRef.current?.videoHeight) {
+                    canvas.width = videoRef.current.videoWidth;
+                    canvas.height = videoRef.current.videoHeight;
+                    context.drawImage(videoRef.current, 0, 0);
+                    const imageData = canvas.toDataURL('image/jpeg');
+                    console.log('Photo captured:', imageData);
+                    // Save to state or local storage for future processing
+                  }
+                }
+              }}
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 p-4 rounded-full bg-secondary text-background hover:bg-secondary/90 transition-all duration-300 shadow-lg"
+              aria-label="Capturar foto"
+            >
+              <Camera size={28} />
+            </button>
           </section>
         ) : activeNav === 'mi-ropa' ? (
           <section className="space-y-6">
@@ -332,24 +244,51 @@ export default function App() {
           </section>
         ) : activeNav === 'user' ? (
           <section className="space-y-6">
-            <div className="rounded-3xl bg-surface-container p-6 shadow-2xl">
-              <h2 className="font-headline text-4xl text-secondary mb-3">Perfil</h2>
-              <p className="font-body text-primary text-sm opacity-80 mb-6">
+            <div className="rounded-3xl bg-surface-container p-6 shadow-2xl max-w-3xl mx-auto">
+              <h2 className="font-headline text-4xl text-secondary mb-3 text-center">Perfil</h2>
+              <p className="font-body text-primary text-sm opacity-80 mb-6 text-center">
                 Accede a tu información, ajustes y preferencias de estilo.
               </p>
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div className="rounded-3xl border border-white/10 bg-background/70 p-6">
-                  <p className="text-xs uppercase tracking-[0.35em] text-secondary/70 mb-3">Usuario</p>
-                  <p className="text-primary text-lg font-semibold">Nombre de usuario</p>
-                  <p className="text-secondary text-sm mt-2">lookia.user@example.com</p>
+
+              <div className="flex flex-col items-center gap-4 px-4 sm:px-0">
+                <div className="relative">
+                  <button className="group relative w-48 h-48 sm:w-64 sm:h-64 rounded-full overflow-hidden bg-surface-container border-2 border-white/6 flex items-center justify-center transition-all duration-300 hover:shadow-lg focus:outline-none">
+                    <span className="sr-only">Editar foto de perfil</span>
+                    <div className="w-full h-full rounded-full bg-gradient-to-br from-background/30 to-surface-container" />
+                    <Edit3 className="absolute right-3 bottom-3 w-7 h-7 text-secondary bg-background/60 p-1 rounded-full opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+                  </button>
                 </div>
-                <div className="rounded-3xl border border-white/10 bg-background/70 p-6">
-                  <p className="text-xs uppercase tracking-[0.35em] text-secondary/70 mb-3">Actividad reciente</p>
-                  <ul className="space-y-3 text-primary text-sm">
-                    <li className="rounded-2xl bg-surface-container p-4">Guardaste un look nuevo.</li>
-                    <li className="rounded-2xl bg-surface-container p-4">Exploraste ropa deportiva.</li>
-                    <li className="rounded-2xl bg-surface-container p-4">Actualizaste tu colección.</li>
-                  </ul>
+
+                <div className="w-full flex justify-center">
+                  <button className="mt-2 px-5 py-2 rounded-2xl bg-transparent border border-white/10 text-primary">Editar foto</button>
+                </div>
+
+                <div className="w-full mt-2 px-0">
+                  <div className="rounded-2xl bg-background/70 p-4">
+                    <p className="text-xs uppercase tracking-[0.35em] text-secondary/70 mb-3">Info</p>
+                    <div className="grid gap-3">
+                      <div className="flex justify-between items-center p-3 rounded-2xl bg-surface-container min-w-0">
+                        <span className="text-secondary/70 text-sm mr-3 truncate">Nombre de usuario</span>
+                        <span className="text-primary font-semibold truncate text-right min-w-0">NombreUsuario</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 rounded-2xl bg-surface-container min-w-0">
+                        <span className="text-secondary/70 text-sm mr-3 truncate">Nombre real</span>
+                        <span className="text-primary font-semibold truncate text-right min-w-0">Nombre Real</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 rounded-2xl bg-surface-container min-w-0">
+                        <span className="text-secondary/70 text-sm mr-3 truncate">Correo</span>
+                        <span className="text-primary font-semibold truncate text-right min-w-0">lookia.user@example.com</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 rounded-2xl bg-surface-container min-w-0">
+                        <span className="text-secondary/70 text-sm mr-3 truncate">Contraseña</span>
+                        <span className="text-primary font-semibold truncate text-right min-w-0">••••••••</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center mt-4">
+                    <button className="px-6 py-2 rounded-2xl bg-secondary text-background font-semibold">Editar info</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -357,7 +296,7 @@ export default function App() {
         ) : (
           <>
             {/* Category Pills */}
-            <div className="flex gap-3 overflow-x-auto no-scrollbar mb-8 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6">
+            <div className="flex gap-3 overflow-x-auto no-scrollbar mb-8 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6 flex-nowrap">
               {CATEGORIES.map((cat, idx) => (
                 <motion.button
                   key={cat}
@@ -365,7 +304,7 @@ export default function App() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.05 }}
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-6 sm:px-8 py-4 rounded-full whitespace-nowrap font-bold text-base sm:text-lg transition-all duration-300 ${
+                  className={`flex-shrink-0 px-4 sm:px-6 py-3 rounded-full whitespace-nowrap font-bold text-sm sm:text-base transition-all duration-300 ${
                     activeCategory === cat 
                     ? 'bg-secondary-container text-secondary shadow-lg shadow-secondary-container/20' 
                     : 'bg-surface-container text-primary hover:bg-surface-container-high'

@@ -30,6 +30,7 @@ const CATEGORIES = [
   'Old Money'
 ];
 
+
 // Items cleared — new categories will be populated later
 const ITEMS: { id: number; category: string; url?: string; description?: string }[] = [];
 
@@ -40,8 +41,53 @@ export default function App() {
   const [submenuOpen, setSubmenuOpen] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const sidebarRef = useRef<HTMLDivElement | null>(null);
+  const firstSidebarItemRef = useRef<HTMLButtonElement | null>(null);
 
   const filteredItems = ITEMS.filter(item => item.category === activeCategory || activeCategory === 'All');
+
+  const handleSidebarKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') {
+      setMenuOpen(false);
+    }
+    if (event.key !== 'Tab' || !sidebarRef.current) {
+      return;
+    }
+
+    const focusableSelectors = [
+      'button:not([disabled])',
+      'a[href]',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])'
+    ].join(', ');
+    const focusable = Array.from(sidebarRef.current.querySelectorAll<HTMLElement>(focusableSelectors))
+      .filter(el => el.offsetParent !== null);
+
+    if (!focusable.length) {
+      return;
+    }
+
+    const firstFocusable = focusable[0];
+    const lastFocusable = focusable[focusable.length - 1];
+
+    if (event.shiftKey && document.activeElement === firstFocusable) {
+      event.preventDefault();
+      lastFocusable.focus();
+    }
+
+    if (!event.shiftKey && document.activeElement === lastFocusable) {
+      event.preventDefault();
+      firstFocusable.focus();
+    }
+  };
+
+  useEffect(() => {
+    if (menuOpen) {
+      firstSidebarItemRef.current?.focus();
+    }
+  }, [menuOpen]);
 
   useEffect(() => {
     let active = true;
@@ -90,105 +136,133 @@ export default function App() {
   }, [activeNav]);
 
   return (
-    <div className="min-h-screen bg-background selection:bg-secondary/30">
-      {/* Top App Bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md px-4 sm:px-6 py-4 flex items-center justify-center border-b border-white/5 relative">
-        <div className="absolute left-4 sm:left-6">
+    <div className="min-h-screen bg-background selection:bg-secondary/30 overflow-x-hidden">
+      {/* Off-canvas Sidebar */}
+      <aside
+        id="sidebar"
+        ref={sidebarRef}
+        onKeyDown={handleSidebarKeyDown}
+        aria-hidden={!menuOpen}
+        aria-label="Menú lateral de navegación"
+        className={`fixed inset-y-0 left-0 z-40 w-[min(18rem,80vw)] border-r border-white/10 bg-background/95 text-primary px-4 pt-6 pb-8 shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      >
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-secondary/70 mb-2">Menú</p>
+            <h2 className="text-2xl font-black text-secondary">LOOKIA</h2>
+          </div>
           <button
-            onClick={() => setMenuOpen(prev => !prev)}
-            className="p-2 -ml-2 text-secondary hover:bg-surface-container rounded-full transition-colors active:scale-95 duration-150"
-            aria-label="Abrir menú"
+            onClick={() => setMenuOpen(false)}
+            className="p-2 text-secondary hover:bg-surface-container-high rounded-full transition-colors duration-150"
+            aria-label="Cerrar menú"
           >
-            <Menu size={24} />
+            <ChevronRight size={20} className="rotate-180" />
           </button>
-          <AnimatePresence>
-            {menuOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                className="absolute left-0 top-full mt-3 min-w-[18rem] w-[calc(100vw-2rem)] max-w-[22rem] rounded-3xl border border-white/10 bg-surface-container/95 p-4 shadow-2xl backdrop-blur-xl sm:w-auto"
-              >
-                <p className="text-xs uppercase tracking-[0.35em] text-secondary/80 mb-3">
-                  Menu
-                </p>
-                <button
-                  onClick={() => { setActiveNav('compass'); setMenuOpen(false); }}
-                  className={`w-full rounded-2xl px-4 py-3 flex items-center gap-3 text-left transition font-body ${activeNav === 'compass' ? 'bg-secondary-container text-secondary' : 'hover:bg-surface-container-high text-primary'}`}
-                >
-                  <Compass size={18} />
-                  Explorar
-                </button>
-                <div
-                  onMouseEnter={() => setSubmenuOpen(true)}
-                  onMouseLeave={() => setSubmenuOpen(false)}
-                  className="w-full"
-                >
-                  <div
-                    onClick={() => setSubmenuOpen(prev => !prev)}
-                    className={`w-full flex items-center justify-between gap-3 rounded-2xl px-4 py-3 font-body ${submenuOpen ? 'bg-secondary-container text-secondary' : 'hover:bg-surface-container-high text-primary'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Shirt size={18} />
-                      <span>Ropero</span>
-                    </div>
-                    <ChevronRight size={14} className={`${submenuOpen ? 'rotate-90' : ''} transition-transform`} />
-                  </div>
+        </div>
 
-                  {submenuOpen && (
-                    <div className="mt-2 ml-6 flex flex-col gap-2">
-                      <button
-                        onClick={() => { setActiveNav('mi-ropa'); setMenuOpen(false); setSubmenuOpen(false); }}
-                        className={`w-full text-left rounded-xl px-3 py-2 transition font-body ${activeNav === 'mi-ropa' ? 'bg-surface-container-high text-secondary' : 'text-primary hover:bg-surface-container'}`}
-                      >
-                        Mi ropa
-                      </button>
-                      <button
-                        onClick={() => { setActiveNav('mis-outfits'); setMenuOpen(false); setSubmenuOpen(false); }}
-                        className={`w-full text-left rounded-xl px-3 py-2 transition font-body ${activeNav === 'mis-outfits' ? 'bg-surface-container-high text-secondary' : 'text-primary hover:bg-surface-container'}`}
-                      >
-                        Mis outfits
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => { setActiveNav('camera'); setMenuOpen(false); }}
-                  className={`w-full rounded-2xl px-4 py-3 flex items-center gap-3 text-left transition font-body ${activeNav === 'camera' ? 'bg-secondary-container text-secondary' : 'hover:bg-surface-container-high text-primary'}`}
-                >
-                  <Camera size={18} />
-                  Subir
-                </button>
-                <button
-                  onClick={() => { setActiveNav('user'); setMenuOpen(false); }}
-                  className={`w-full rounded-2xl px-4 py-3 flex items-center gap-3 text-left transition font-body ${activeNav === 'user' ? 'bg-secondary-container text-secondary' : 'hover:bg-surface-container-high text-primary'}`}
-                >
-                  <User size={18} />
-                  Perfil
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-        <h1 className="font-headline font-black text-4xl sm:text-5xl md:text-6xl text-secondary tracking-tighter uppercase">
-          LOOKIA
-        </h1>
-        <div className="absolute right-4 sm:right-6">
+        <div className="flex h-[calc(100vh-5.5rem)] flex-col overflow-y-auto pr-1 no-scrollbar" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+          <nav className="space-y-2 mb-6" aria-label="Navegación principal">
           <button
-            onClick={() => {
-              // TODO: Implement dark/light mode toggle
-              console.log('Theme toggle clicked');
-            }}
-            className="p-2 -mr-2 text-secondary hover:bg-surface-container rounded-full transition-colors active:scale-95 duration-150"
-            aria-label="Cambiar modo"
+            ref={firstSidebarItemRef}
+            onClick={() => { setActiveNav('compass'); setMenuOpen(false); }}
+            className={`w-full text-left rounded-2xl px-4 py-3 flex items-center gap-3 transition font-body ${activeNav === 'compass' ? 'bg-secondary-container text-secondary' : 'bg-surface-container/90 text-primary hover:bg-surface-container-high'}`}
           >
-            <Moon size={24} />
+            <Compass size={18} />
+            Explorar
           </button>
+          <button
+            onClick={() => { setSubmenuOpen(prev => !prev); }}
+            className={`w-full rounded-2xl px-4 py-3 flex items-center justify-between gap-3 transition font-body ${submenuOpen ? 'bg-secondary-container text-secondary' : 'bg-surface-container/90 text-primary hover:bg-surface-container-high'}`}
+            aria-expanded={submenuOpen}
+            aria-controls="submenu-ropo"
+          >
+            <span className="flex items-center gap-3">
+              <Shirt size={18} />
+              Ropero
+            </span>
+            <ChevronRight size={18} className={`${submenuOpen ? 'rotate-90' : ''} transition-transform duration-200`} />
+          </button>
+          {submenuOpen && (
+            <div id="submenu-ropo" className="mt-2 ml-4 flex flex-col gap-2">
+              <button
+                onClick={() => { setActiveNav('mi-ropa'); setMenuOpen(false); setSubmenuOpen(false); }}
+                className={`w-full text-left rounded-xl px-3 py-2 transition font-body ${activeNav === 'mi-ropa' ? 'bg-surface-container-high text-secondary' : 'text-primary hover:bg-surface-container'}`}
+              >
+                Mi ropa
+              </button>
+              <button
+                onClick={() => { setActiveNav('mis-outfits'); setMenuOpen(false); setSubmenuOpen(false); }}
+                className={`w-full text-left rounded-xl px-3 py-2 transition font-body ${activeNav === 'mis-outfits' ? 'bg-surface-container-high text-secondary' : 'text-primary hover:bg-surface-container'}`}
+              >
+                Mis outfits
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => { setActiveNav('camera'); setMenuOpen(false); }}
+            className={`w-full text-left rounded-2xl px-4 py-3 flex items-center gap-3 transition font-body ${activeNav === 'camera' ? 'bg-secondary-container text-secondary' : 'bg-surface-container/90 text-primary hover:bg-surface-container-high'}`}
+          >
+            <Camera size={18} />
+            Subir
+          </button>
+          <button
+            onClick={() => { setActiveNav('user'); setMenuOpen(false); }}
+            className={`w-full text-left rounded-2xl px-4 py-3 flex items-center gap-3 transition font-body ${activeNav === 'user' ? 'bg-secondary-container text-secondary' : 'bg-surface-container/90 text-primary hover:bg-surface-container-high'}`}
+          >
+            <User size={18} />
+            Perfil
+          </button>
+        </nav>
+
+        <div className="space-y-3 border-t border-white/10 pt-4">
+          <p className="text-xs uppercase tracking-[0.35em] text-secondary/70">Categorías</p>
+          {CATEGORIES.map((cat, idx) => (
+            <button
+              key={cat}
+              onClick={() => { setActiveCategory(cat); setMenuOpen(false); }}
+              className={`w-full text-left rounded-2xl px-4 py-3 transition font-body ${activeCategory === cat ? 'bg-secondary-container text-secondary' : 'bg-surface-container/90 text-primary hover:bg-surface-container-high'}`}
+            >
+              {cat}
+            </button>
+          ))}
         </div>
-      </header>
+      </div>
+      </aside>
+
+      <div className={`min-h-screen transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${menuOpen ? 'translate-x-[min(18rem,80vw)]' : 'translate-x-0'}`}>
+        {/* Top App Bar */}
+        <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md px-4 sm:px-6 py-4 flex items-center justify-center border-b border-white/5 relative">
+          <div className="absolute left-4 sm:left-6">
+            <button
+              onClick={() => setMenuOpen(prev => !prev)}
+              className="p-2 -ml-2 text-secondary hover:bg-surface-container rounded-full transition-colors active:scale-95 duration-150"
+              aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={menuOpen}
+              aria-controls="sidebar"
+            >
+              <Menu size={24} />
+            </button>
+          </div>
+          <h1 className="font-headline font-black text-4xl sm:text-5xl md:text-6xl text-secondary tracking-tighter uppercase">
+            LOOKIA
+          </h1>
+          <div className="absolute right-4 sm:right-6">
+            <button
+              onClick={() => {
+                // TODO: Implement dark/light mode toggle
+                console.log('Theme toggle clicked');
+              }}
+              className="p-2 -mr-2 text-secondary hover:bg-surface-container rounded-full transition-colors active:scale-95 duration-150"
+              aria-label="Cambiar modo"
+            >
+              <Moon size={24} />
+            </button>
+          </div>
+        </header>
 
       {/* Main Content */}
       <main className={`${activeNav === 'camera' ? 'pt-0 pb-0 px-0 w-screen' : 'pt-0 pb-20 sm:pb-28 px-4 sm:px-5 lg:px-6 max-w-[1280px]'} mx-auto editorial-gradient`}>
+
         {activeNav === 'camera' ? (
           <section className="relative w-screen h-[calc(100vh-140px)] sm:h-[calc(100vh-160px)] flex items-center justify-center px-4">
             <div className="w-full h-full rounded-3xl overflow-hidden bg-black">
@@ -346,7 +420,7 @@ export default function App() {
           </>
         )}
       </main>
-
+      </div>
     </div>
   );
 }

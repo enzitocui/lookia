@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+import Loader from './components/Loader';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Menu, 
@@ -39,10 +40,20 @@ export default function App() {
   const [activeNav, setActiveNav] = useState('compass');
   const [menuOpen, setMenuOpen] = useState(false);
   const [submenuOpen, setSubmenuOpen] = useState(false);
+  const [isLight, setIsLight] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
   const firstSidebarItemRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const root = document.documentElement;
+      const init = root.classList.contains('theme-light') || root.getAttribute('data-theme') === 'light';
+      setIsLight(init);
+    }
+  }, []);
 
   const filteredItems = ITEMS.filter(item => item.category === activeCategory || activeCategory === 'All');
 
@@ -137,6 +148,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background selection:bg-secondary/30 overflow-x-hidden">
+      {showLoader && <Loader onFinish={() => setShowLoader(false)} />}
       {/* Off-canvas Sidebar */}
       <aside
         id="sidebar"
@@ -144,11 +156,10 @@ export default function App() {
         onKeyDown={handleSidebarKeyDown}
         aria-hidden={!menuOpen}
         aria-label="Menú lateral de navegación"
-        className={`fixed inset-y-0 left-0 z-40 w-[min(18rem,80vw)] border-r border-white/10 bg-background/95 text-primary px-4 pt-6 pb-8 shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`sidebar-panel fixed inset-y-0 left-0 z-40 w-[min(18rem,80vw)] border-r border-white/10 bg-background/95 text-primary px-4 pt-6 pb-8 shadow-2xl backdrop-blur-xl ${menuOpen ? 'sidebar-panel--open' : 'sidebar-panel--closed'}`}
       >
         <div className="flex items-center justify-between gap-4 mb-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-secondary/70 mb-2">Menú</p>
             <h2 className="text-2xl font-black text-secondary">LOOKIA</h2>
           </div>
           <button
@@ -165,18 +176,18 @@ export default function App() {
           <button
             ref={firstSidebarItemRef}
             onClick={() => { setActiveNav('compass'); setMenuOpen(false); }}
-            className={`w-full text-left rounded-2xl px-4 py-3 flex items-center gap-3 transition font-body ${activeNav === 'compass' ? 'bg-secondary-container text-secondary' : 'bg-surface-container/90 text-primary hover:bg-surface-container-high'}`}
+            className={`sidebar-menu-item w-full text-left rounded-2xl px-4 py-3 flex items-center gap-2 transition font-body ${activeNav === 'compass' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'}`}
           >
             <Compass size={18} />
             Explorar
           </button>
           <button
             onClick={() => { setSubmenuOpen(prev => !prev); }}
-            className={`w-full rounded-2xl px-4 py-3 flex items-center justify-between gap-3 transition font-body ${submenuOpen ? 'bg-secondary-container text-secondary' : 'bg-surface-container/90 text-primary hover:bg-surface-container-high'}`}
+            className={`sidebar-menu-item w-full rounded-2xl px-4 py-3 flex items-center justify-between gap-2 transition font-body ${submenuOpen ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'}`}
             aria-expanded={submenuOpen}
             aria-controls="submenu-ropo"
           >
-            <span className="flex items-center gap-3">
+            <span className="flex items-center gap-2">
               <Shirt size={18} />
               Ropero
             </span>
@@ -186,13 +197,13 @@ export default function App() {
             <div id="submenu-ropo" className="mt-2 ml-4 flex flex-col gap-2">
               <button
                 onClick={() => { setActiveNav('mi-ropa'); setMenuOpen(false); setSubmenuOpen(false); }}
-                className={`w-full text-left rounded-xl px-3 py-2 transition font-body ${activeNav === 'mi-ropa' ? 'bg-surface-container-high text-secondary' : 'text-primary hover:bg-surface-container'}`}
+                className={`sidebar-menu-item sidebar-menu-subitem w-full text-left rounded-xl px-3 py-2 transition font-body ${activeNav === 'mi-ropa' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'}`}
               >
                 Mi ropa
               </button>
               <button
                 onClick={() => { setActiveNav('mis-outfits'); setMenuOpen(false); setSubmenuOpen(false); }}
-                className={`w-full text-left rounded-xl px-3 py-2 transition font-body ${activeNav === 'mis-outfits' ? 'bg-surface-container-high text-secondary' : 'text-primary hover:bg-surface-container'}`}
+                className={`sidebar-menu-item sidebar-menu-subitem w-full text-left rounded-xl px-3 py-2 transition font-body ${activeNav === 'mis-outfits' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'}`}
               >
                 Mis outfits
               </button>
@@ -200,27 +211,27 @@ export default function App() {
           )}
           <button
             onClick={() => { setActiveNav('camera'); setMenuOpen(false); }}
-            className={`w-full text-left rounded-2xl px-4 py-3 flex items-center gap-3 transition font-body ${activeNav === 'camera' ? 'bg-secondary-container text-secondary' : 'bg-surface-container/90 text-primary hover:bg-surface-container-high'}`}
+            className={`sidebar-menu-item w-full text-left rounded-2xl px-4 py-3 flex items-center gap-2 transition font-body ${activeNav === 'camera' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'}`}
           >
             <Camera size={18} />
             Subir
           </button>
           <button
             onClick={() => { setActiveNav('user'); setMenuOpen(false); }}
-            className={`w-full text-left rounded-2xl px-4 py-3 flex items-center gap-3 transition font-body ${activeNav === 'user' ? 'bg-secondary-container text-secondary' : 'bg-surface-container/90 text-primary hover:bg-surface-container-high'}`}
+            className={`sidebar-menu-item w-full text-left rounded-2xl px-4 py-3 flex items-center gap-2 transition font-body ${activeNav === 'user' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'}`}
           >
             <User size={18} />
             Perfil
           </button>
         </nav>
 
-        <div className="space-y-3 border-t border-white/10 pt-4">
+        <div className="space-y-3 border-t border-white/10 pt-4 max-h-[36vh] sm:max-h-[52vh] overflow-y-auto pr-1 no-scrollbar">
           <p className="text-xs uppercase tracking-[0.35em] text-secondary/70">Categorías</p>
           {CATEGORIES.map((cat, idx) => (
             <button
               key={cat}
               onClick={() => { setActiveCategory(cat); setMenuOpen(false); }}
-              className={`w-full text-left rounded-2xl px-4 py-3 transition font-body ${activeCategory === cat ? 'bg-secondary-container text-secondary' : 'bg-surface-container/90 text-primary hover:bg-surface-container-high'}`}
+              className={`sidebar-menu-item sidebar-menu-item--category w-full text-left rounded-2xl px-4 py-3 transition font-body ${activeCategory === cat ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'}`}
             >
               {cat}
             </button>
@@ -249,13 +260,21 @@ export default function App() {
           <div className="absolute right-4 sm:right-6">
             <button
               onClick={() => {
-                // TODO: Implement dark/light mode toggle
-                console.log('Theme toggle clicked');
+                const root = document.documentElement;
+                const nextLight = !root.classList.contains('theme-light');
+                if (nextLight) {
+                  root.classList.add('theme-light');
+                  root.setAttribute('data-theme', 'light');
+                } else {
+                  root.classList.remove('theme-light');
+                  root.removeAttribute('data-theme');
+                }
+                setIsLight(nextLight);
               }}
               className="p-2 -mr-2 text-secondary hover:bg-surface-container rounded-full transition-colors active:scale-95 duration-150"
               aria-label="Cambiar modo"
             >
-              <Moon size={24} />
+              {isLight ? <Sun size={24} /> : <Moon size={24} />}
             </button>
           </div>
         </header>
@@ -378,10 +397,8 @@ export default function App() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.05 }}
                   onClick={() => setActiveCategory(cat)}
-                  className={`flex-shrink-0 px-4 sm:px-6 py-3 rounded-full whitespace-nowrap font-bold text-sm sm:text-base transition-all duration-300 ${
-                    activeCategory === cat 
-                    ? 'bg-secondary-container text-secondary shadow-lg shadow-secondary-container/20' 
-                    : 'bg-surface-container text-primary hover:bg-surface-container-high'
+                  className={`category-pill flex-shrink-0 ${
+                    activeCategory === cat ? 'category-pill--active' : 'category-pill--inactive'
                   }`}
                 >
                   {cat}

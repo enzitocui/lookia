@@ -6,7 +6,6 @@
   --font-headline: "Michroma", sans-serif;
   --font-body: "Saira", sans-serif;
   --font-label: "Saira", sans-serif;
-
   --color-background: #111125;
   --color-secondary: #ddb7ff;
   --color-primary: #c5c5d8;
@@ -15,11 +14,15 @@
   --color-surface-container-high: #28283d;
   --color-surface-container-highest: #333348;
   --color-secondary-container: #622599;
+  --color-text: #e2e0fc;
+  --color-text-secondary: #cfcbe6;
+  --color-border: rgba(255,255,255,0.04);
 }
 
 @layer base {
   body {
-    @apply bg-background text-[#e2e0fc] font-body antialiased;
+    @apply bg-background font-body antialiased;
+    color: var(--color-text);
     -ms-overflow-style: none;
     scrollbar-width: none;
     font-family: "Saira", sans-serif;
@@ -32,6 +35,239 @@
     display: none;
   }
 }
+
+/* (legacy violet light block removed) */
+
+/* Ensure focus/outline or border uses the theming variable where applicable */
+.theme-light :where(.ring, .border) {
+  /* no-op: components already use classes; this keeps selectors available for future tweaks */
+}
+
+/* Replace white-based borders used by dark utilities with soft lavender in light mode */
+.theme-light [class*="border-white"] {
+  border-color: rgba(215,208,255,0.6) !important;
+}
+.theme-light [class*="border-white/10"] {
+  border-color: rgba(215,208,255,0.18) !important;
+}
+.theme-light [class*="border-white/6"] {
+  border-color: rgba(215,208,255,0.22) !important;
+}
+
+/* Ensure any translucent background layers based on background variable render correctly */
+.theme-light [class*="bg-background"] {
+  /* utilities like bg-background/70 will still compute from --color-background */
+}
+
+/* Map common utility-like class names to theme variables in light mode */
+.theme-light .bg-background {
+  background-color: var(--color-background) !important;
+}
+.theme-light .bg-surface {
+  background-color: var(--color-surface) !important;
+}
+.theme-light .bg-surface-container {
+  background-color: var(--color-surface-container) !important;
+}
+.theme-light .bg-surface-container-high {
+  background-color: var(--color-surface-container-high) !important;
+}
+.theme-light .bg-surface-container-highest {
+  background-color: var(--color-surface-container-highest) !important;
+}
+.theme-light .bg-secondary {
+  background-color: var(--color-secondary) !important;
+}
+.theme-light .bg-secondary-container {
+  background-color: var(--color-secondary-container) !important;
+}
+.theme-light .text-primary {
+  color: var(--color-primary) !important;
+}
+.theme-light .text-secondary {
+  color: var(--color-text-secondary) !important;
+}
+.theme-light .text-background {
+  color: var(--color-background) !important;
+}
+.theme-light .border-primary {
+  border-color: var(--color-border) !important;
+}
+
+/* Premium warm light theme (cream, sand, terracota, champagne) */
+.theme-light, [data-theme="light"], html.theme-light, body.theme-light {
+  /* Backgrounds */
+  --color-background: #F7F3EE; /* Cream very soft */
+  --color-surface: #FEFBF9; /* near-cream for cards and panels */
+  --color-surface-container: #EFE7DD; /* beige claro */
+  --color-surface-container-high: #E6DCCD; /* arena suave */
+  --color-surface-container-highest: #FEFBF9;
+
+  /* Brand colors */
+  --color-primary: #C97B63; /* terracota moderno */
+  --color-primary-hover: #D08A73;
+  --color-secondary: #D8B68A; /* champagne dorado */
+  --color-secondary-container: #EAD9C4; /* soft container tone */
+
+  /* Typography */
+  --color-text: #2F241F; /* marrón oscuro elegante */
+  --color-text-secondary: #6E625B; /* marrón grisáceo */
+
+  /* Borders & shadows */
+  --color-border: #DDD2C5; /* beige cálido muy suave */
+  --shadow-1: 0 6px 18px rgba(47,36,31,0.06);
+  --shadow-2: 0 12px 36px rgba(47,36,31,0.07);
+  --shadow-3: 0 4px 12px rgba(47,36,31,0.04);
+
+  /* Theme transitions (smooth, premium) */
+  --theme-transition: 380ms cubic-bezier(.2,.9,.2,1);
+}
+
+/* Apply smooth transitions for core properties to avoid flashes */
+:root, :root * {
+  transition-property: background-color, color, border-color, box-shadow, fill, stroke;
+  transition-duration: var(--theme-transition);
+  transition-timing-function: cubic-bezier(.2,.9,.2,1);
+}
+
+/* Shadow overrides for Tailwind-like utility classes to fit light theme */
+.theme-light .shadow-2xl { box-shadow: var(--shadow-2) !important; }
+.theme-light .shadow-xl { box-shadow: var(--shadow-1) !important; }
+.theme-light .shadow-lg { box-shadow: var(--shadow-3) !important; }
+
+/* Border color mapping for common utilities */
+.theme-light [class*="border-"] { border-color: var(--color-border) !important; }
+
+/* Subtle focus ring for accessibility aligned to brand */
+.theme-light :focus { outline-color: color-mix(in srgb, var(--color-primary) 30%, transparent); }
+
+/* Sidebar menu animation and item styles */
+.sidebar-panel {
+  opacity: 0;
+  transform: translateX(-100%) translateY(-14px) scale(0.98);
+  pointer-events: none;
+  transition: opacity 320ms ease-in-out, transform 320ms ease-in-out;
+}
+.sidebar-panel--open {
+  opacity: 1;
+  transform: translateX(0) translateY(0) scale(1);
+  pointer-events: auto;
+}
+.sidebar-panel--closed {
+  opacity: 0;
+  transform: translateX(-100%) translateY(-14px) scale(0.98);
+  pointer-events: none;
+}
+.sidebar-menu-item {
+  width: 100%;
+  text-align: left;
+  border-radius: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  border: 1px solid transparent;
+  background-color: var(--color-surface-container);
+  color: var(--color-text);
+  box-shadow: 0 0 0 rgba(0,0,0,0);
+  transition: transform 300ms ease-in-out, background-color 300ms ease-in-out, color 300ms ease-in-out, box-shadow 300ms ease-in-out, border-color 300ms ease-in-out;
+}
+.sidebar-menu-item:hover {
+  transform: translateY(-2px);
+  background-color: var(--color-surface-container-high);
+  box-shadow: 0 16px 32px rgba(0,0,0,0.08);
+  border-color: rgba(255,255,255,0.08);
+}
+.sidebar-menu-item--inactive {
+  background-color: var(--color-surface-container);
+}
+.sidebar-menu-item--active {
+  transform: scale(1.02);
+  background-color: var(--color-secondary-container);
+  color: var(--color-secondary);
+  box-shadow: 0 18px 42px rgba(0,0,0,0.13);
+  border-color: rgba(255,255,255,0.16);
+}
+.sidebar-menu-item--active:hover {
+  transform: scale(1.02);
+}
+.sidebar-menu-subitem {
+  padding-left: 1.15rem;
+}
+.sidebar-menu-item--category {
+  justify-content: flex-start;
+}
+
+/* Existing category pill styles remain for category row */
+.category-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem 1.4rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  transition: transform 250ms ease, background-color 250ms ease, color 250ms ease, box-shadow 250ms ease, border-color 250ms ease;
+}
+.category-pill--inactive {
+  background-color: var(--color-surface-container);
+  color: var(--color-text);
+  box-shadow: 0 0 0 rgba(0,0,0,0);
+}
+.category-pill--inactive:hover {
+  transform: translateY(-2px);
+  background-color: var(--color-surface-container-high);
+  box-shadow: 0 14px 26px rgba(47,36,31,0.08);
+}
+.category-pill--active {
+  background-color: var(--color-primary);
+  color: var(--color-surface);
+  transform: scale(1.08);
+  box-shadow: 0 18px 42px rgba(201,123,99,0.22);
+  border-color: rgba(255,255,255,0.14);
+}
+.category-pill--active:hover {
+  transform: scale(1.08);
+}
+
+/* Make category pills responsive within the scroll area */
+.category-pill {
+  min-width: 3.5rem;
+}
+
+@media (max-width: 640px) {
+  .category-pill {
+    padding: 0.65rem 1.1rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Loader styles */
+.app-loader {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-background);
+  z-index: 99999;
+  transition: opacity 0.55s ease, visibility 0.55s ease;
+  pointer-events: auto;
+}
+.app-loader--visible { opacity: 1; visibility: visible; }
+.app-loader--hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.app-loader-video {
+  width: min(75vw, 960px);
+  max-height: 80vh;
+  object-fit: contain;
+  background: transparent;
+  display: block;
+}
+
+/* Keep pointer-events from blocking interactions when hidden */
+.app-loader--hidden * { pointer-events: none; }
 
 .michroma-regular {
   font-family: "Michroma", sans-serif;

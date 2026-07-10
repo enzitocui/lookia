@@ -4,7 +4,6 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import Loader from './components/Loader';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Menu, 
@@ -17,6 +16,7 @@ import {
   Moon,
   Sun
 } from 'lucide-react';
+import LogoImg from '../logo/Logo.png';
 
 const CATEGORIES = [
   'Alternativo',
@@ -40,20 +40,11 @@ export default function App() {
   const [activeNav, setActiveNav] = useState('compass');
   const [menuOpen, setMenuOpen] = useState(false);
   const [submenuOpen, setSubmenuOpen] = useState(false);
-  const [isLight, setIsLight] = useState(false);
-  const [showLoader, setShowLoader] = useState(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
   const firstSidebarItemRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    if (typeof document !== 'undefined') {
-      const root = document.documentElement;
-      const init = root.classList.contains('theme-light') || root.getAttribute('data-theme') === 'light';
-      setIsLight(init);
-    }
-  }, []);
 
   const filteredItems = ITEMS.filter(item => item.category === activeCategory || activeCategory === 'All');
 
@@ -99,6 +90,24 @@ export default function App() {
       firstSidebarItemRef.current?.focus();
     }
   }, [menuOpen]);
+
+  // Initialize theme from localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('lookia-theme') as 'dark' | 'light' | null;
+    const initialTheme = savedTheme || 'dark';
+    setTheme(initialTheme);
+    document.documentElement.setAttribute('data-theme', initialTheme);
+  }, []);
+
+  // Apply theme changes
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('lookia-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   useEffect(() => {
     let active = true;
@@ -147,8 +156,7 @@ export default function App() {
   }, [activeNav]);
 
   return (
-    <div className="min-h-screen bg-background selection:bg-secondary/30 overflow-x-hidden">
-      {showLoader && <Loader onFinish={() => setShowLoader(false)} />}
+    <div className="min-h-screen app-shell selection:bg-secondary/30 overflow-x-hidden">
       {/* Off-canvas Sidebar */}
       <aside
         id="sidebar"
@@ -156,38 +164,41 @@ export default function App() {
         onKeyDown={handleSidebarKeyDown}
         aria-hidden={!menuOpen}
         aria-label="Menú lateral de navegación"
-        className={`sidebar-panel fixed inset-y-0 left-0 z-40 w-[min(18rem,80vw)] border-r border-white/10 bg-background/95 text-primary px-4 pt-6 pb-8 shadow-2xl backdrop-blur-xl ${menuOpen ? 'sidebar-panel--open' : 'sidebar-panel--closed'}`}
+        className={`sidebar-panel fixed inset-y-0 left-0 z-40 w-[min(18rem,80vw)] border-r border-white/10 bg-background/95 text-primary px-5 pt-6 pb-8 transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <div>
-            <h2 className="text-2xl font-black text-secondary">LOOKIA</h2>
-          </div>
+        <div className="sidebar-brand-block relative w-full mb-6">
           <button
             onClick={() => setMenuOpen(false)}
-            className="p-2 text-secondary hover:bg-surface-container-high rounded-full transition-colors duration-150"
+            className="icon-button absolute right-0 top-0 rounded-full p-2 text-secondary"
             aria-label="Cerrar menú"
           >
             <ChevronRight size={20} className="rotate-180" />
           </button>
+
+          <div className="sidebar-logo-wrapper flex flex-col items-center">
+            <img src={LogoImg} alt="Lookia logo" className="sidebar-logo object-contain" />
+            <h2 className="mt-4 logo-brand">LOOKIA</h2>
+            <p className="mt-2 sidebar-slogan">Your style.<br/>Your rules.</p>
+          </div>
         </div>
 
-        <div className="flex h-[calc(100vh-5.5rem)] flex-col overflow-y-auto pr-1 no-scrollbar" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
-          <nav className="space-y-2 mb-6" aria-label="Navegación principal">
+        <div className="sidebar-scroll-area flex min-h-0 flex-1 flex-col overflow-y-auto px-1 pb-1 no-scrollbar" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+          <nav className="sidebar-nav mb-6 flex flex-col gap-2" aria-label="Navegación principal">
           <button
             ref={firstSidebarItemRef}
             onClick={() => { setActiveNav('compass'); setMenuOpen(false); }}
-            className={`sidebar-menu-item w-full text-left rounded-2xl px-4 py-3 flex items-center gap-2 transition font-body ${activeNav === 'compass' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'}`}
+            className={`sidebar-menu-item ${activeNav === 'compass' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'} rounded-2xl px-4 py-3 font-body`}
           >
             <Compass size={18} />
             Explorar
           </button>
           <button
             onClick={() => { setSubmenuOpen(prev => !prev); }}
-            className={`sidebar-menu-item w-full rounded-2xl px-4 py-3 flex items-center justify-between gap-2 transition font-body ${submenuOpen ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'}`}
+            className={`sidebar-menu-item ${submenuOpen ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'} rounded-2xl px-4 py-3 font-body`}
             aria-expanded={submenuOpen}
             aria-controls="submenu-ropo"
           >
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-3">
               <Shirt size={18} />
               Ropero
             </span>
@@ -197,13 +208,13 @@ export default function App() {
             <div id="submenu-ropo" className="mt-2 ml-4 flex flex-col gap-2">
               <button
                 onClick={() => { setActiveNav('mi-ropa'); setMenuOpen(false); setSubmenuOpen(false); }}
-                className={`sidebar-menu-item sidebar-menu-subitem w-full text-left rounded-xl px-3 py-2 transition font-body ${activeNav === 'mi-ropa' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'}`}
+                className={`sidebar-menu-item ${activeNav === 'mi-ropa' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'} rounded-xl px-3 py-2 font-body sidebar-menu-subitem`}
               >
                 Mi ropa
               </button>
               <button
                 onClick={() => { setActiveNav('mis-outfits'); setMenuOpen(false); setSubmenuOpen(false); }}
-                className={`sidebar-menu-item sidebar-menu-subitem w-full text-left rounded-xl px-3 py-2 transition font-body ${activeNav === 'mis-outfits' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'}`}
+                className={`sidebar-menu-item ${activeNav === 'mis-outfits' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'} rounded-xl px-3 py-2 font-body sidebar-menu-subitem`}
               >
                 Mis outfits
               </button>
@@ -211,42 +222,40 @@ export default function App() {
           )}
           <button
             onClick={() => { setActiveNav('camera'); setMenuOpen(false); }}
-            className={`sidebar-menu-item w-full text-left rounded-2xl px-4 py-3 flex items-center gap-2 transition font-body ${activeNav === 'camera' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'}`}
+            className={`sidebar-menu-item ${activeNav === 'camera' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'} rounded-2xl px-4 py-3 font-body`}
           >
             <Camera size={18} />
             Subir
           </button>
           <button
             onClick={() => { setActiveNav('user'); setMenuOpen(false); }}
-            className={`sidebar-menu-item w-full text-left rounded-2xl px-4 py-3 flex items-center gap-2 transition font-body ${activeNav === 'user' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'}`}
+            className={`sidebar-menu-item ${activeNav === 'user' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'} rounded-2xl px-4 py-3 font-body`}
           >
             <User size={18} />
             Perfil
           </button>
         </nav>
 
-        <div className="space-y-3 border-t border-white/10 pt-4 max-h-[36vh] sm:max-h-[52vh] overflow-y-auto pr-1 no-scrollbar">
-          <p className="text-xs uppercase tracking-[0.35em] text-secondary/70">Categorías</p>
-          {CATEGORIES.map((cat, idx) => (
-            <button
-              key={cat}
-              onClick={() => { setActiveCategory(cat); setMenuOpen(false); }}
-              className={`sidebar-menu-item sidebar-menu-item--category w-full text-left rounded-2xl px-4 py-3 transition font-body ${activeCategory === cat ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'}`}
-            >
-              {cat}
-            </button>
-          ))}
+        
+        <div className="flex-grow" />
+
+        <div className="mt-auto pt-6">
+          <div className="w-full h-px bg-white/5 mb-3" />
+          <div className="text-center sidebar-footer">
+            <div className="mb-1">LOOKIA v1.0</div>
+            <div>Made by LA VIRGO BANDA</div>
+          </div>
         </div>
       </div>
       </aside>
 
       <div className={`min-h-screen transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${menuOpen ? 'translate-x-[min(18rem,80vw)]' : 'translate-x-0'}`}>
         {/* Top App Bar */}
-        <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md px-4 sm:px-6 py-4 flex items-center justify-center border-b border-white/5 relative">
+        <header className="app-bar fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 flex items-center justify-center relative">
           <div className="absolute left-4 sm:left-6">
             <button
               onClick={() => setMenuOpen(prev => !prev)}
-              className="p-2 -ml-2 text-secondary hover:bg-surface-container rounded-full transition-colors active:scale-95 duration-150"
+              className="icon-button p-2 -ml-2 text-secondary rounded-full"
               aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
               aria-expanded={menuOpen}
               aria-controls="sidebar"
@@ -254,27 +263,16 @@ export default function App() {
               <Menu size={24} />
             </button>
           </div>
-          <h1 className="font-headline font-black text-4xl sm:text-5xl md:text-6xl text-secondary tracking-tighter uppercase">
+          <h1 className="font-headline font-extrabold app-header-logo logo-brand tracking-tighter uppercase">
             LOOKIA
           </h1>
           <div className="absolute right-4 sm:right-6">
             <button
-              onClick={() => {
-                const root = document.documentElement;
-                const nextLight = !root.classList.contains('theme-light');
-                if (nextLight) {
-                  root.classList.add('theme-light');
-                  root.setAttribute('data-theme', 'light');
-                } else {
-                  root.classList.remove('theme-light');
-                  root.removeAttribute('data-theme');
-                }
-                setIsLight(nextLight);
-              }}
-              className="p-2 -mr-2 text-secondary hover:bg-surface-container rounded-full transition-colors active:scale-95 duration-150"
-              aria-label="Cambiar modo"
+              onClick={toggleTheme}
+              className="icon-button p-2 -mr-2 text-secondary rounded-full"
+              aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
-              {isLight ? <Sun size={24} /> : <Moon size={24} />}
+              {theme === 'dark' ? <Sun size={24} /> : <Moon size={24} />}
             </button>
           </div>
         </header>
@@ -284,10 +282,10 @@ export default function App() {
 
         {activeNav === 'camera' ? (
           <section className="relative w-screen h-[calc(100vh-140px)] sm:h-[calc(100vh-160px)] flex items-center justify-center px-4">
-            <div className="w-full h-full rounded-3xl overflow-hidden bg-black">
+            <div className="w-full h-full rounded-3xl overflow-hidden bg-surface">
               <video
                 ref={videoRef}
-                className="w-full h-full object-cover bg-black"
+                className="w-full h-full object-cover bg-surface"
                 autoPlay
                 muted
                 playsInline
@@ -309,7 +307,7 @@ export default function App() {
                   }
                 }
               }}
-              className="absolute bottom-6 left-1/2 -translate-x-1/2 p-4 rounded-full bg-secondary text-background hover:bg-secondary/90 transition-all duration-300 shadow-lg"
+              className="btn-accent absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full p-4 shadow-lg"
               aria-label="Capturar foto"
             >
               <Camera size={28} />
@@ -317,21 +315,21 @@ export default function App() {
           </section>
         ) : activeNav === 'mi-ropa' ? (
           <section className="space-y-6">
-            <div className="rounded-3xl bg-surface-container p-6 shadow-2xl">
+            <div className="panel rounded-3xl p-6">
               <h2 className="font-headline text-4xl text-secondary mb-3">Mi ropa</h2>
-              <p className="font-body text-primary text-sm opacity-80 mb-6">Aquí verás tus prendas guardadas.</p>
-              <div className="rounded-3xl border-2 border-dashed border-white/10 bg-background/70 p-8 flex items-center justify-center">
-                <p className="text-primary opacity-70 text-center">No hay prendas guardadas aún.</p>
+              <p className="font-body text-muted text-sm mb-6">Aquí verás tus prendas guardadas.</p>
+              <div className="dashed-panel rounded-3xl p-8 flex items-center justify-center">
+                <p className="text-secondary text-center">No hay prendas guardadas aún.</p>
               </div>
             </div>
           </section>
         ) : activeNav === 'mis-outfits' ? (
           <section className="space-y-6">
-            <div className="rounded-3xl bg-surface-container p-6 shadow-2xl">
+            <div className="panel rounded-3xl p-6">
               <h2 className="font-headline text-4xl text-secondary mb-3">Mis outfits</h2>
-              <p className="font-body text-primary text-sm opacity-80 mb-6">Combina tus prendas y guarda tus looks favoritos.</p>
-              <div className="rounded-3xl border-2 border-dashed border-white/10 bg-background/70 p-8 flex items-center justify-center">
-                <p className="text-primary opacity-70 text-center">No hay outfits guardados aún.</p>
+              <p className="font-body text-muted text-sm mb-6">Combina tus prendas y guarda tus looks favoritos.</p>
+              <div className="dashed-panel rounded-3xl p-8 flex items-center justify-center">
+                <p className="text-secondary text-center">No hay outfits guardados aún.</p>
               </div>
             </div>
           </section>
@@ -345,7 +343,7 @@ export default function App() {
 
               <div className="flex flex-col items-center gap-4 px-4 sm:px-0">
                 <div className="relative">
-                  <button className="group relative w-48 h-48 sm:w-64 sm:h-64 rounded-full overflow-hidden bg-surface-container border-2 border-white/6 flex items-center justify-center transition-all duration-300 hover:shadow-lg focus:outline-none">
+                  <button className="group relative w-48 h-48 sm:w-64 sm:h-64 rounded-full overflow-hidden bg-surface-container border-2 border-white/6 flex items-center justify-center transition-all duration-300 hover:shadow-lg focus:outline-none avatar-gradient">
                     <span className="sr-only">Editar foto de perfil</span>
                     <div className="w-full h-full rounded-full bg-gradient-to-br from-background/30 to-surface-container" />
                     <Edit3 className="absolute right-3 bottom-3 w-7 h-7 text-secondary bg-background/60 p-1 rounded-full opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
@@ -353,11 +351,11 @@ export default function App() {
                 </div>
 
                 <div className="w-full flex justify-center">
-                  <button className="mt-2 px-5 py-2 rounded-2xl bg-transparent border border-white/10 text-primary">Editar foto</button>
+                  <button className="mt-2 px-5 py-2 rounded-2xl btn-outline">Editar foto</button>
                 </div>
 
                 <div className="w-full mt-2 px-0">
-                  <div className="rounded-2xl bg-background/70 p-4">
+                  <div className="rounded-2xl bg-background/70 p-4 panel-alt">
                     <p className="text-xs uppercase tracking-[0.35em] text-secondary/70 mb-3">Info</p>
                     <div className="grid gap-3">
                       <div className="flex justify-between items-center p-3 rounded-2xl bg-surface-container min-w-0">
@@ -380,7 +378,7 @@ export default function App() {
                   </div>
 
                   <div className="flex justify-center mt-4">
-                    <button className="px-6 py-2 rounded-2xl bg-secondary text-background font-semibold">Editar info</button>
+                    <button className="px-6 py-2 rounded-2xl btn-accent font-semibold">Editar info</button>
                   </div>
                 </div>
               </div>
@@ -389,7 +387,7 @@ export default function App() {
         ) : (
           <>
             {/* Category Pills */}
-            <div className="flex gap-3 overflow-x-auto no-scrollbar mb-8 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6 flex-nowrap">
+            <div className="flex gap-3 overflow-x-auto no-scrollbar mb-8 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6 flex-nowrap categories-row">
               {CATEGORIES.map((cat, idx) => (
                 <motion.button
                   key={cat}
@@ -397,9 +395,7 @@ export default function App() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.05 }}
                   onClick={() => setActiveCategory(cat)}
-                  className={`category-pill flex-shrink-0 ${
-                    activeCategory === cat ? 'category-pill--active' : 'category-pill--inactive'
-                  }`}
+                  className={`category-pill ${activeCategory === cat ? 'category-pill--active' : 'category-pill--inactive'}`}
                 >
                   {cat}
                 </motion.button>
@@ -444,11 +440,7 @@ export default function App() {
 
 function NavButton({ icon, active = false, onClick }: { icon: React.ReactNode; active?: boolean; onClick?: () => void }) {
   return (
-    <button onClick={onClick} className={`p-3 rounded-full transition-all duration-300 ${
-      active 
-      ? 'bg-secondary-container text-secondary scale-110 shadow-lg shadow-secondary-container/30' 
-      : 'text-primary opacity-50 hover:opacity-100'
-    }`}>
+    <button onClick={onClick} className={`nav-icon ${active ? 'nav-icon--active' : 'nav-icon--inactive'}`}>
       {icon}
     </button>
   );

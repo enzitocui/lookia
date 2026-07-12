@@ -95,11 +95,11 @@ const ITEMS: { id: number; category: string; url: string; description: string }[
   { id: 50, category: 'Deportivo', url: 'https://i.pinimg.com/736x/bc/a3/68/bca368b1357d69bb9e291f6ffd1fc222.jpg', description: 'Deportivo Outfit' },
   { id: 51, category: 'Deportivo', url: 'https://i.pinimg.com/736x/07/de/82/07de82424abb236e7db417f2065d56d4.jpg', description: 'Deportivo Outfit' },
   { id: 52, category: 'Deportivo', url: 'https://i.pinimg.com/736x/f3/a6/d8/f3a6d899c3d6a8625b475ad802a36b16.jpg', description: 'Deportivo Outfit' },
-  { id: 53, category: 'Deportivo', url: 'https://i.pinimg.com/736x/2e/d5/e2/2ed5e2f79f87362acfbca73eb99c481f.jpg', description: 'Deportivo Outfit' },
+  { id: 53, category: 'Deportivo', url: 'https://i.pinimg.com/1200x/39/30/52/39305283754a45bf54c34f292936570c.jpg', description: 'Deportivo Outfit' },
   { id: 54, category: 'Deportivo', url: 'https://i.pinimg.com/736x/d8/d6/71/d8d671829f460e84c0966b0abfba5e3f.jpg', description: 'Deportivo Outfit' },
 
   // Formal
-  { id: 55, category: 'Formal', url: 'https://i.pinimg.com/736x/db/99/09/db9909c0a398b8dec866f412f97fa29e.jpg', description: 'Formal Outfit' },
+  { id: 55, category: 'Formal', url: 'https://i.pinimg.com/736x/60/d9/48/60d948bafb806c59401609c50614e6ba.jpg', description: 'Formal Outfit' },
   { id: 56, category: 'Formal', url: 'https://i.pinimg.com/736x/b6/ba/2d/b6ba2df0553e56c00ba09e3c839cfc5d.jpg', description: 'Formal Outfit' },
   { id: 57, category: 'Formal', url: 'https://i.pinimg.com/736x/07/9f/c6/079fc6fb462e26b897c2e73960397f2c.jpg', description: 'Formal Outfit' },
   { id: 58, category: 'Formal', url: 'https://i.pinimg.com/736x/69/7c/bc/697cbc94768203f721c8949ca3743392.jpg', description: 'Formal Outfit' },
@@ -112,7 +112,7 @@ const ITEMS: { id: number; category: string; url: string; description: string }[
   { id: 63, category: 'Old Money', url: 'https://i.pinimg.com/736x/66/f3/9c/66f39c6c2428234104926ea6279c6ea9.jpg', description: 'Old Money Outfit' },
   { id: 64, category: 'Old Money', url: 'https://i.pinimg.com/736x/dd/01/a3/dd01a3877e7f8d337af68be26f91e12a.jpg', description: 'Old Money Outfit' },
   { id: 65, category: 'Old Money', url: 'https://i.pinimg.com/736x/95/a1/08/95a1084239826a0756c561755ba405f9.jpg', description: 'Old Money Outfit' },
-  { id: 66, category: 'Old Money', url: 'https://i.pinimg.com/736x/1b/4b/75/1b4b75e0a2d444b3a6e0218729be97bc.jpg', description: 'Old Money Outfit' },
+  { id: 66, category: 'Old Money', url: 'https://i.pinimg.com/736x/14/b8/1b/14b81be806d11a8e7ffd24caffccb0dc.jpg', description: 'Old Money Outfit' },
   { id: 67, category: 'Old Money', url: 'https://i.pinimg.com/736x/8a/db/ca/8adbca281bc3cfbf331ffd76a9933a90.jpg', description: 'Old Money Outfit' },
   { id: 68, category: 'Old Money', url: 'https://i.pinimg.com/736x/8a/07/bc/8a07bc6fc1c4b56f65ecdd549c3e6483.jpg', description: 'Old Money Outfit' },
   { id: 69, category: 'Old Money', url: 'https://i.pinimg.com/736x/98/37/04/983704d100d85e8646a9a09f28b1b957.jpg', description: 'Old Money Outfit' },

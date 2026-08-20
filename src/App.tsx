@@ -10,7 +10,12 @@ import {
   Compass, 
   Shirt, 
   Camera, 
+  Check,
+  FileImage,
   User,
+  Upload,
+  RotateCcw,
+  ChevronLeft,
   ChevronRight,
   Edit3,
   Moon,
@@ -27,7 +32,13 @@ const CATEGORIES = [
   'Vintage',
   'Deportivo',
   'Formal',
-  'Old Money'
+  'Old Money',
+  'Cottagecore',
+  'Coquette',
+  'Casual',
+  'Punk',
+  'Fairycore',
+  'Cosplay'
 ];
 
 const ITEMS: { id: number; category: string; url: string; description: string }[] = [
@@ -118,6 +129,54 @@ const ITEMS: { id: number; category: string; url: string; description: string }[
   { id: 70, category: 'Old Money', url: 'https://i.pinimg.com/736x/8a/07/bc/8a07bc6fc1c4b56f65ecdd549c3e6483.jpg', description: 'Old Money Outfit' },
   { id: 71, category: 'Old Money', url: 'https://i.pinimg.com/736x/98/37/04/983704d100d85e8646a9a09f28b1b957.jpg', description: 'Old Money Outfit' },
   { id: 72, category: 'Old Money', url: 'https://i.pinimg.com/736x/4e/94/55/4e9455e3bfd13b905e2b135b36ce9d45.jpg', description: 'Old Money Outfit' },
+
+  // Cottagecore
+  { id: 73, category: 'Cottagecore', url: 'PEGAR_URL_1_AQUI', description: 'Cottagecore Outfit' },
+  { id: 74, category: 'Cottagecore', url: 'PEGAR_URL_2_AQUI', description: 'Cottagecore Outfit' },
+  { id: 75, category: 'Cottagecore', url: 'PEGAR_URL_3_AQUI', description: 'Cottagecore Outfit' },
+  { id: 76, category: 'Cottagecore', url: 'PEGAR_URL_4_AQUI', description: 'Cottagecore Outfit' },
+  { id: 77, category: 'Cottagecore', url: 'PEGAR_URL_5_AQUI', description: 'Cottagecore Outfit' },
+  { id: 78, category: 'Cottagecore', url: 'PEGAR_URL_6_AQUI', description: 'Cottagecore Outfit' },
+
+  // Coquette
+  { id: 79, category: 'Coquette', url: 'PEGAR_URL_1_AQUI', description: 'Coquette Outfit' },
+  { id: 80, category: 'Coquette', url: 'PEGAR_URL_2_AQUI', description: 'Coquette Outfit' },
+  { id: 81, category: 'Coquette', url: 'PEGAR_URL_3_AQUI', description: 'Coquette Outfit' },
+  { id: 82, category: 'Coquette', url: 'PEGAR_URL_4_AQUI', description: 'Coquette Outfit' },
+  { id: 83, category: 'Coquette', url: 'PEGAR_URL_5_AQUI', description: 'Coquette Outfit' },
+  { id: 84, category: 'Coquette', url: 'PEGAR_URL_6_AQUI', description: 'Coquette Outfit' },
+
+  // Casual
+  { id: 85, category: 'Casual', url: 'PEGAR_URL_1_AQUI', description: 'Casual Outfit' },
+  { id: 86, category: 'Casual', url: 'PEGAR_URL_2_AQUI', description: 'Casual Outfit' },
+  { id: 87, category: 'Casual', url: 'PEGAR_URL_3_AQUI', description: 'Casual Outfit' },
+  { id: 88, category: 'Casual', url: 'PEGAR_URL_4_AQUI', description: 'Casual Outfit' },
+  { id: 89, category: 'Casual', url: 'PEGAR_URL_5_AQUI', description: 'Casual Outfit' },
+  { id: 90, category: 'Casual', url: 'PEGAR_URL_6_AQUI', description: 'Casual Outfit' },
+
+  // Punk
+  { id: 91, category: 'Punk', url: 'PEGAR_URL_1_AQUI', description: 'Punk Outfit' },
+  { id: 92, category: 'Punk', url: 'PEGAR_URL_2_AQUI', description: 'Punk Outfit' },
+  { id: 93, category: 'Punk', url: 'PEGAR_URL_3_AQUI', description: 'Punk Outfit' },
+  { id: 94, category: 'Punk', url: 'PEGAR_URL_4_AQUI', description: 'Punk Outfit' },
+  { id: 95, category: 'Punk', url: 'PEGAR_URL_5_AQUI', description: 'Punk Outfit' },
+  { id: 96, category: 'Punk', url: 'PEGAR_URL_6_AQUI', description: 'Punk Outfit' },
+
+  // Fairycore
+  { id: 97, category: 'Fairycore', url: 'PEGAR_URL_1_AQUI', description: 'Fairycore Outfit' },
+  { id: 98, category: 'Fairycore', url: 'PEGAR_URL_2_AQUI', description: 'Fairycore Outfit' },
+  { id: 99, category: 'Fairycore', url: 'PEGAR_URL_3_AQUI', description: 'Fairycore Outfit' },
+  { id: 100, category: 'Fairycore', url: 'PEGAR_URL_4_AQUI', description: 'Fairycore Outfit' },
+  { id: 101, category: 'Fairycore', url: 'PEGAR_URL_5_AQUI', description: 'Fairycore Outfit' },
+  { id: 102, category: 'Fairycore', url: 'PEGAR_URL_6_AQUI', description: 'Fairycore Outfit' },
+
+  // Cosplay
+  { id: 103, category: 'Cosplay', url: 'PEGAR_URL_1_AQUI', description: 'Cosplay Outfit' },
+  { id: 104, category: 'Cosplay', url: 'PEGAR_URL_2_AQUI', description: 'Cosplay Outfit' },
+  { id: 105, category: 'Cosplay', url: 'PEGAR_URL_3_AQUI', description: 'Cosplay Outfit' },
+  { id: 106, category: 'Cosplay', url: 'PEGAR_URL_4_AQUI', description: 'Cosplay Outfit' },
+  { id: 107, category: 'Cosplay', url: 'PEGAR_URL_5_AQUI', description: 'Cosplay Outfit' },
+  { id: 108, category: 'Cosplay', url: 'PEGAR_URL_6_AQUI', description: 'Cosplay Outfit' },
 ];
 
 export default function App() {
@@ -126,12 +185,52 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [submenuOpen, setSubmenuOpen] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [uploadMode, setUploadMode] = useState<'choose' | 'camera' | 'file'>('choose');
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const [uploadConfirmed, setUploadConfirmed] = useState(false);
+  const [cameraCaptureUrl, setCameraCaptureUrl] = useState<string | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
   const firstSidebarItemRef = useRef<HTMLButtonElement | null>(null);
+  const categoryRowRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollCategoriesLeft, setCanScrollCategoriesLeft] = useState(false);
+  const [canScrollCategoriesRight, setCanScrollCategoriesRight] = useState(false);
 
   const filteredItems = ITEMS.filter(item => item.category === activeCategory || activeCategory === 'All');
+
+  useEffect(() => {
+    const categoryRow = categoryRowRef.current;
+    if (!categoryRow) {
+      setCanScrollCategoriesLeft(false);
+      setCanScrollCategoriesRight(false);
+      return;
+    }
+
+    const updateCategoryScrollState = () => {
+      const maxScrollLeft = categoryRow.scrollWidth - categoryRow.clientWidth;
+      setCanScrollCategoriesLeft(categoryRow.scrollLeft > 1);
+      setCanScrollCategoriesRight(maxScrollLeft - categoryRow.scrollLeft > 1);
+    };
+
+    const resizeObserver = new ResizeObserver(updateCategoryScrollState);
+    categoryRow.addEventListener('scroll', updateCategoryScrollState, { passive: true });
+    resizeObserver.observe(categoryRow);
+    updateCategoryScrollState();
+
+    return () => {
+      categoryRow.removeEventListener('scroll', updateCategoryScrollState);
+      resizeObserver.disconnect();
+    };
+  }, [activeNav]);
+
+  const scrollCategories = (direction: 'left' | 'right') => {
+    categoryRowRef.current?.scrollBy({
+      left: direction === 'right' ? categoryRowRef.current.clientWidth * 0.75 : -categoryRowRef.current.clientWidth * 0.75,
+      behavior: 'smooth'
+    });
+  };
 
   const handleSidebarKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape') {
@@ -228,7 +327,7 @@ export default function App() {
       }
     };
 
-    if (activeNav === 'camera') {
+    if (activeNav === 'camera' && uploadMode === 'camera') {
       startCamera();
     } else {
       stopCamera();
@@ -238,7 +337,50 @@ export default function App() {
       active = false;
       stopCamera();
     };
-  }, [activeNav]);
+  }, [activeNav, uploadMode]);
+
+  useEffect(() => {
+    return () => {
+      if (filePreviewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(filePreviewUrl);
+      }
+    };
+  }, [filePreviewUrl]);
+
+  const openFilePicker = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setCameraError('Elegí una imagen JPG, PNG o WEBP');
+      return;
+    }
+
+    setCameraError(null);
+    setUploadConfirmed(false);
+    setFilePreviewUrl(URL.createObjectURL(file));
+    setUploadMode('file');
+  };
+
+  const selectUploadMode = (mode: 'camera' | 'file') => {
+    setCameraError(null);
+    setCameraCaptureUrl(null);
+    setUploadConfirmed(false);
+    if (mode === 'file') {
+      openFilePicker();
+      return;
+    }
+    setUploadMode(mode);
+  };
 
   return (
     <div className="min-h-screen app-shell selection:bg-secondary/30 overflow-x-hidden">
@@ -305,7 +447,7 @@ export default function App() {
             </div>
           )}
           <button
-            onClick={() => { setActiveNav('camera'); setMenuOpen(false); }}
+            onClick={() => { setActiveNav('camera'); setUploadMode('choose'); setFilePreviewUrl(null); setCameraCaptureUrl(null); setMenuOpen(false); }}
             className={`sidebar-menu-item ${activeNav === 'camera' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'} rounded-2xl px-4 py-3 font-body`}
           >
             <Camera size={18} />
@@ -364,37 +506,65 @@ export default function App() {
       <main className={`${activeNav === 'camera' ? 'pt-0 pb-0 px-0 w-screen' : 'pt-0 pb-20 sm:pb-28 px-4 sm:px-5 lg:px-6 max-w-[1280px]'} mx-auto editorial-gradient`}>
 
         {activeNav === 'camera' ? (
-          <section className="relative w-screen h-[calc(100vh-140px)] sm:h-[calc(100vh-160px)] flex items-center justify-center px-4">
-            <div className="w-full h-full rounded-3xl overflow-hidden bg-surface">
-              <video
-                ref={videoRef}
-                className="w-full h-full object-cover bg-surface"
-                autoPlay
-                muted
-                playsInline
-              />
-            </div>
-            <button
-              onClick={() => {
-                // TODO: Implement photo capture functionality
-                if (videoRef.current && videoRef.current.srcObject instanceof MediaStream) {
-                  const canvas = document.createElement('canvas');
-                  const context = canvas.getContext('2d');
-                  if (context && videoRef.current?.videoWidth && videoRef.current?.videoHeight) {
-                    canvas.width = videoRef.current.videoWidth;
-                    canvas.height = videoRef.current.videoHeight;
-                    context.drawImage(videoRef.current, 0, 0);
-                    const imageData = canvas.toDataURL('image/jpeg');
-                    console.log('Photo captured:', imageData);
-                    // Save to state or local storage for future processing
+          <section className={`upload-page ${uploadMode === 'camera' ? 'upload-page--camera' : ''}`}>
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={handleFileChange} />
+
+            {uploadMode === 'choose' ? (
+              <div className="upload-choice panel rounded-3xl">
+                <div className="upload-heading">
+                  <span className="section-label">Subir</span>
+                  <h2 className="font-headline">¿Qué querés hacer?</h2>
+                  <p className="text-muted">Elegí cómo querés agregar una nueva prenda.</p>
+                </div>
+                <div className="upload-options">
+                  <button type="button" className="upload-option" onClick={() => selectUploadMode('file')}>
+                    <span className="upload-option-icon"><Upload size={28} /></span>
+                    <span><strong>Subir un archivo</strong><small>Elegí una imagen de tu dispositivo</small></span>
+                    <FileImage size={20} className="upload-option-arrow" />
+                  </button>
+                  <button type="button" className="upload-option" onClick={() => selectUploadMode('camera')}>
+                    <span className="upload-option-icon"><Camera size={28} /></span>
+                    <span><strong>Usar la cámara</strong><small>Tomá una foto ahora</small></span>
+                    <Camera size={20} className="upload-option-arrow" />
+                  </button>
+                </div>
+              </div>
+            ) : uploadMode === 'file' ? (
+              <div className="upload-preview panel rounded-3xl">
+                <div className="upload-heading">
+                  <span className="section-label">Vista previa</span>
+                  <h2 className="font-headline">Así se ve tu prenda</h2>
+                </div>
+                {filePreviewUrl && <img src={filePreviewUrl} alt="Vista previa de la prenda seleccionada" className="upload-preview-image" />}
+                {uploadConfirmed && <p className="upload-confirmation"><Check size={18} /> Imagen lista para guardar más adelante.</p>}
+                {cameraError && <p className="upload-error" role="alert">{cameraError}</p>}
+                <div className="upload-actions">
+                  <button type="button" className="btn-accent rounded-full px-6 py-3" onClick={() => setUploadConfirmed(true)}><Check size={18} /> Confirmar</button>
+                  <button type="button" className="btn-outline rounded-full px-6 py-3" onClick={openFilePicker}><RotateCcw size={18} /> Elegir otra</button>
+                </div>
+              </div>
+            ) : (
+              <div className="upload-camera-wrap">
+                <div className="upload-camera-frame rounded-3xl overflow-hidden bg-surface">
+                  <video ref={videoRef} className="w-full h-full object-cover bg-surface" autoPlay muted playsInline />
+                  {cameraCaptureUrl && <img src={cameraCaptureUrl} alt="Foto capturada" className="upload-camera-capture" />}
+                </div>
+                {cameraError && <p className="upload-error" role="alert">{cameraError}</p>}
+                <button type="button" onClick={() => {
+                  if (videoRef.current && videoRef.current.srcObject instanceof MediaStream) {
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    if (context && videoRef.current.videoWidth && videoRef.current.videoHeight) {
+                      canvas.width = videoRef.current.videoWidth;
+                      canvas.height = videoRef.current.videoHeight;
+                      context.drawImage(videoRef.current, 0, 0);
+                      setCameraCaptureUrl(canvas.toDataURL('image/jpeg'));
+                    }
                   }
-                }
-              }}
-              className="btn-accent absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full p-4 shadow-lg"
-              aria-label="Capturar foto"
-            >
-              <Camera size={28} />
-            </button>
+                }} className="btn-accent upload-capture-button rounded-full p-4 shadow-lg" aria-label="Capturar foto"><Camera size={28} /></button>
+                <button type="button" className="btn-outline upload-back-button rounded-full px-5 py-2" onClick={() => setUploadMode('choose')}>Volver</button>
+              </div>
+            )}
           </section>
         ) : activeNav === 'mi-ropa' ? (
           <section className="space-y-6">
@@ -470,19 +640,58 @@ export default function App() {
         ) : (
           <>
             {/* Category Pills */}
-            <div className="flex gap-3 overflow-x-auto no-scrollbar mb-8 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6 flex-nowrap categories-row">
-              {CATEGORIES.map((cat, idx) => (
-                <motion.button
-                  key={cat}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`category-pill ${activeCategory === cat ? 'category-pill--active' : 'category-pill--inactive'}`}
+            <div className="category-nav">
+              {canScrollCategoriesLeft && (
+                <button
+                  type="button"
+                  className="category-nav-button category-nav-button--left"
+                  onClick={() => scrollCategories('left')}
+                  aria-label="Ver categorías anteriores"
                 >
-                  {cat}
-                </motion.button>
-              ))}
+                  <ChevronLeft size={20} />
+                </button>
+              )}
+              <div
+                ref={categoryRowRef}
+                className="flex gap-3 overflow-x-auto no-scrollbar mb-8 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6 flex-nowrap categories-row"
+              onWheel={(event) => {
+                const categoryRow = event.currentTarget;
+                if (window.matchMedia('(max-width: 768px)').matches) {
+                  return;
+                }
+
+                const hasHorizontalOverflow = categoryRow.scrollWidth > categoryRow.clientWidth;
+                const isMostlyVerticalWheel = Math.abs(event.deltaY) > Math.abs(event.deltaX);
+
+                if (hasHorizontalOverflow && isMostlyVerticalWheel && event.deltaY !== 0) {
+                  categoryRow.scrollLeft += event.deltaY;
+                  event.preventDefault();
+                }
+              }}
+              >
+                {CATEGORIES.map((cat, idx) => (
+                  <motion.button
+                    key={cat}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    onClick={() => setActiveCategory(cat)}
+                    className={`category-pill ${activeCategory === cat ? 'category-pill--active' : 'category-pill--inactive'}`}
+                  >
+                    {cat}
+                  </motion.button>
+                ))}
+              </div>
+              {canScrollCategoriesRight && (
+                <button
+                  type="button"
+                  className="category-nav-button category-nav-button--right"
+                  onClick={() => scrollCategories('right')}
+                  aria-label="Ver más categorías"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              )}
             </div>
 
             {/* Horizontal Responsive Grid */}

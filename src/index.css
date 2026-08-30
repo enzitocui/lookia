@@ -914,6 +914,17 @@ input, textarea, select, button {
   break-inside: avoid;
 }
 
+.explore-status {
+  margin: -1rem 0 1.25rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.explore-status--error {
+  color: var(--accent-light);
+}
+
 @media (max-width: 1024px) {
   .explore-grid {
     column-width: 14rem;

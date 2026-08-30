@@ -5,11 +5,12 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Menu, 
-  Compass, 
-  Shirt, 
-  Camera, 
+import outfits from './data/outfits.json';
+import {
+  Menu,
+  Compass,
+  Shirt,
+  Camera,
   Check,
   FileImage,
   User,
@@ -23,161 +24,50 @@ import {
 } from 'lucide-react';
 import LogoImg from '../logo/Logo.png';
 
-const CATEGORIES = [
-  'Boho',
-  'Y2K',
-  'E-Girl',
-  'Gotico',
-  'Grunge',
-  'Vintage',
-  'Deportivo',
-  'Formal',
-  'Old Money',
-  'Cottagecore',
-  'Coquette',
-  'Casual',
-  'Punk',
-  'Fairycore',
-  'Cosplay'
-];
+const CATEGORY_SEARCHES = {
+  Boho: 'boho outfit fashion',
+  Y2K: 'Y2K outfit fashion',
+  'E-Girl': 'e-girl outfit fashion',
+  Gotico: 'gothic outfit fashion',
+  Grunge: 'grunge outfit fashion',
+  Vintage: 'vintage outfit fashion',
+  Deportivo: 'sporty outfit fashion',
+  Formal: 'formal outfit fashion',
+  'Old Money': 'old money outfit fashion',
+  Cottagecore: 'cottagecore outfit fashion',
+  Coquette: 'coquette outfit fashion',
+  Casual: 'casual outfit fashion',
+  Punk: 'punk outfit fashion',
+  Fairycore: 'fairycore outfit fashion',
+  Cosplay: 'cosplay outfit fashion'
+} as const;
 
-const ITEMS: { id: number; category: string; url: string; description: string }[] = [
-  // Boho
-  { id: 1, category: 'Boho', url: 'https://i.pinimg.com/1200x/91/a2/96/91a2960dd3e657388574b8f8287c6d84.jpg', description: 'Boho Outfit' },
-  { id: 2, category: 'Boho', url: 'https://i.pinimg.com/736x/7e/d3/4b/7ed34b1777f5e6c9901a2fbf7674b60f.jpg', description: 'Boho Outfit' },
-  { id: 3, category: 'Boho', url: 'https://i.pinimg.com/736x/8e/3d/87/8e3d87091241cdb544e1f0baea2a33dd.jpg', description: 'Boho Outfit' },
-  { id: 4, category: 'Boho', url: 'https://i.pinimg.com/1200x/78/20/5f/78205f496aed0104e3729d5ff918406c.jpg', description: 'Boho Outfit' },
-  { id: 5, category: 'Boho', url: 'https://i.pinimg.com/736x/67/3b/e0/673be08e71fc3f14d2b21d7c376e5658.jpg', description: 'Boho Outfit' },
-  { id: 6, category: 'Boho', url: 'https://i.pinimg.com/736x/18/6c/b3/186cb36c21a0ea6887fc380d1fa5a563.jpg', description: 'Boho Outfit' },
-  { id: 7, category: 'Boho', url: 'https://i.pinimg.com/736x/22/59/cb/2259cb68e372a6ffbc6edd31db94c2ce.jpg', description: 'Boho Outfit' },
-  { id: 8, category: 'Boho', url: 'https://i.pinimg.com/1200x/e5/86/24/e58624d868861ab15b5284287315ecb6.jpg', description: 'Boho Outfit' },
+type Category = keyof typeof CATEGORY_SEARCHES;
 
-  // Y2K
-  { id: 9, category: 'Y2K', url: 'https://i.pinimg.com/736x/e0/f6/7a/e0f67afe1758672dccdf508cd07e1231.jpg', description: 'Y2K Outfit' },
-  { id: 10, category: 'Y2K', url: 'https://i.pinimg.com/1200x/42/7a/44/427a44ed789d5af1cff6423961d09c8d.jpg', description: 'Y2K Outfit' },
-  { id: 11, category: 'Y2K', url: 'https://i.pinimg.com/736x/96/a5/b7/96a5b7551f1f750d31291fb7475df307.jpg', description: 'Y2K Outfit' },
-  { id: 12, category: 'Y2K', url: 'https://i.pinimg.com/736x/31/fd/a7/31fda775811ad2f92e7d087b36cce2bc.jpg', description: 'Y2K Outfit' },
-  { id: 13, category: 'Y2K', url: 'https://i.pinimg.com/736x/49/f4/fb/49f4fba5f0864ec3bef3b428a97d6155.jpg', description: 'Y2K Outfit' },
-  { id: 14, category: 'Y2K', url: 'https://i.pinimg.com/736x/5c/8d/fd/5c8dfdc4cdca3b5de8181fb8efd140dc.jpg', description: 'Y2K Outfit' },
-  { id: 15, category: 'Y2K', url: 'https://i.pinimg.com/736x/df/a7/32/dfa732cefb321a04e94aafbe3f4d716d.jpg', description: 'Y2K Outfit' },
-  { id: 16, category: 'Y2K', url: 'https://i.pinimg.com/736x/bf/e2/63/bfe263f48aaa8299e1f7d8025894b6ad.jpg', description: 'Y2K Outfit' },
+const CATEGORIES = Object.keys(CATEGORY_SEARCHES) as Category[];
 
-  // E-Girl
-  { id: 17, category: 'E-Girl', url: 'https://i.pinimg.com/736x/70/7e/04/707e04e6b011dc9bc1e56e61a8f58807.jpg', description: 'E-Girl Outfit' },
-  { id: 18, category: 'E-Girl', url: 'https://i.pinimg.com/736x/90/94/73/909473b754a8c05efe1b8c7a9460b9aa.jpg', description: 'E-Girl Outfit' },
-  { id: 19, category: 'E-Girl', url: 'https://i.pinimg.com/1200x/0a/81/fe/0a81fe546d2f206bb463ba8e7e6999be.jpg', description: 'E-Girl Outfit' },
-  { id: 20, category: 'E-Girl', url: 'https://i.pinimg.com/736x/a8/0d/a4/a80da487419066e6b7c56ed38dfee0d5.jpg', description: 'E-Girl Outfit' },
-  { id: 21, category: 'E-Girl', url: 'https://i.pinimg.com/736x/78/ea/da/78eada8fc5612cbee22a938f50616229.jpg', description: 'E-Girl Outfit' },
-  { id: 22, category: 'E-Girl', url: 'https://i.pinimg.com/736x/37/2e/2d/372e2d47d87c862802a8d7918858ee7b.jpg', description: 'E-Girl Outfit' },
-  { id: 23, category: 'E-Girl', url: 'https://i.pinimg.com/736x/7c/26/fd/7c26fdbb2993d06e8962d23d1467e2d8.jpg', description: 'E-Girl Outfit' },
-  { id: 24, category: 'E-Girl', url: 'https://i.pinimg.com/736x/7d/8c/de/7d8cde84d5386a95f064010fa1113ebd.jpg', description: 'E-Girl Outfit' },
-  // Gotico
-  { id: 25, category: 'Gotico', url: 'https://i.pinimg.com/736x/63/93/08/639308c5f5de52ab71e65fb98d051dd9.jpg', description: 'Gotico Outfit' },
-  { id: 26, category: 'Gotico', url: 'https://i.pinimg.com/736x/34/53/a4/3453a46db9420486e646bf5d5b507739.jpg', description: 'Gotico Outfit' },
-  { id: 27, category: 'Gotico', url: 'https://i.pinimg.com/736x/59/8c/6b/598c6bb9e41b27b32c3f07aa3260f43a.jpg', description: 'Gotico Outfit' },
-  { id: 28, category: 'Gotico', url: 'https://i.pinimg.com/1200x/c2/0d/cb/c20dcb46e17febbfeb0a5aaac79e57d2.jpg', description: 'Gotico Outfit' },
-  { id: 29, category: 'Gotico', url: 'https://i.pinimg.com/736x/7e/a3/7e/7ea37e0c95836d9d10bef0def58062f2.jpg', description: 'Gotico Outfit' },
-  { id: 30, category: 'Gotico', url: 'https://i.pinimg.com/736x/63/61/cd/6361cdafa6d81719f7c45e8d8c829cf3.jpg', description: 'Gotico Outfit' },
-  { id: 31, category: 'Gotico', url: 'https://i.pinimg.com/736x/9c/e7/4b/9ce74b9d76d5d3362ed97fba792a0c87.jpg', description: 'Gotico Outfit' },
-  { id: 32, category: 'Gotico', url: 'https://i.pinimg.com/736x/7d/27/5f/7d275fc2b33e3d42703c1d73f15cb5f6.jpg', description: 'Gotico Outfit' },
+type ExploreItem = {
+  id: number | string;
+  category: string;
+  url: string;
+  description: string;
+};
 
-  // Grunge
-  { id: 33, category: 'Grunge', url: 'https://i.pinimg.com/736x/d9/00/73/d90073fab42a20686f5d47a2968fbfec.jpg', description: 'Grunge Outfit' },
-  { id: 34, category: 'Grunge', url: 'https://i.pinimg.com/736x/51/a4/20/51a420518703622e36a9307cefe7a47b.jpg', description: 'Grunge Outfit' },
-  { id: 35, category: 'Grunge', url: 'https://i.pinimg.com/736x/34/2f/db/342fdba583f8b63e70412c7d83df3aed.jpg', description: 'Grunge Outfit' },
-  { id: 36, category: 'Grunge', url: 'https://i.pinimg.com/736x/2b/61/6c/2b616cf8d49b2e9f429c541c07ce68f4.jpg', description: 'Grunge Outfit' },
-  { id: 37, category: 'Grunge', url: 'https://i.pinimg.com/736x/83/ef/63/83ef63194b8436a11c2f1d0f73483750.jpg', description: 'Grunge Outfit' },
-  { id: 38, category: 'Grunge', url: 'https://i.pinimg.com/736x/d7/8a/c4/d78ac401d85a2ccdd67ad559c2f97437.jpg', description: 'Grunge Outfit' },
-  { id: 39, category: 'Grunge', url: 'https://i.pinimg.com/736x/42/5e/cd/425ecdd09931af259b7020c4ff5f3cf3.jpg', description: 'Grunge Outfit' },
-  { id: 40, category: 'Grunge', url: 'https://i.pinimg.com/736x/af/7b/9f/af7b9fd3e91c4b9f8dba1fc95e958bd0.jpg', description: 'Grunge Outfit' },
-  // Vintage
-  { id: 41, category: 'Vintage', url: 'https://i.pinimg.com/736x/c0/30/41/c03041389cb6feb8a16ca9b02e4a9541.jpg', description: 'Vintage Outfit' },
-  { id: 42, category: 'Vintage', url: 'https://i.pinimg.com/1200x/45/4a/51/454a51469320e216d1817d15a810f861.jpg', description: 'Vintage Outfit' },
-  { id: 43, category: 'Vintage', url: 'https://i.pinimg.com/736x/d3/50/32/d35032ea9529dd9144558040c0e20c9a.jpg', description: 'Vintage Outfit' },
-  { id: 44, category: 'Vintage', url: 'https://i.pinimg.com/736x/5b/b2/79/5bb2793098c37d881dded9251efafd3b.jpg', description: 'Vintage Outfit' },
-  { id: 45, category: 'Vintage', url: 'https://i.pinimg.com/1200x/e4/f4/01/e4f40139c7312bc834f95a16a85ab19c.jpg', description: 'Vintage Outfit' },
-  { id: 46, category: 'Vintage', url: 'https://i.pinimg.com/736x/76/d8/b1/76d8b1154db2949156ad9fbef623e229.jpg', description: 'Vintage Outfit' },
-  { id: 47, category: 'Vintage', url: 'https://i.pinimg.com/736x/49/6f/c7/496fc7a6a67ec25c2592b725f4dea7c9.jpg', description: 'Vintage Outfit' },
-  { id: 48, category: 'Vintage', url: 'https://i.pinimg.com/1200x/c0/4b/eb/c04beb8a9a617260fd3318289ed8e325.jpg', description: 'Vintage Outfit' },
+const localItems = outfits as ExploreItem[];
 
-  // Deportivo
-  { id: 49, category: 'Deportivo', url: 'https://i.pinimg.com/736x/71/e3/4b/71e34bacf24b63f96d82aebd2576fc7a.jpg', description: 'Deportivo Outfit' },
-  { id: 50, category: 'Deportivo', url: 'https://i.pinimg.com/736x/da/36/65/da3665ae83ea24edd984cfcea8163cf2.jpg', description: 'Deportivo Outfit' },
-  { id: 51, category: 'Deportivo', url: 'https://i.pinimg.com/1200x/aa/00/ae/aa00ae576cb4166e69f7dd1d6588f4a9.jpg', description: 'Deportivo Outfit' },
-  { id: 52, category: 'Deportivo', url: 'https://i.pinimg.com/736x/bc/a3/68/bca368b1357d69bb9e291f6ffd1fc222.jpg', description: 'Deportivo Outfit' },
-  { id: 53, category: 'Deportivo', url: 'https://i.pinimg.com/736x/07/de/82/07de82424abb236e7db417f2065d56d4.jpg', description: 'Deportivo Outfit' },
-  { id: 54, category: 'Deportivo', url: 'https://i.pinimg.com/736x/f3/a6/d8/f3a6d899c3d6a8625b475ad802a36b16.jpg', description: 'Deportivo Outfit' },
-  { id: 55, category: 'Deportivo', url: 'https://i.pinimg.com/1200x/39/30/52/39305283754a45bf54c34f292936570c.jpg', description: 'Deportivo Outfit' },
-  { id: 56, category: 'Deportivo', url: 'https://i.pinimg.com/736x/d8/d6/71/d8d671829f460e84c0966b0abfba5e3f.jpg', description: 'Deportivo Outfit' },
+const shuffle = <T,>(items: T[]): T[] => {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+  return shuffled;
+};
 
-  // Formal
-  { id: 57, category: 'Formal', url: 'https://i.pinimg.com/736x/60/d9/48/60d948bafb806c59401609c50614e6ba.jpg', description: 'Formal Outfit' },
-  { id: 58, category: 'Formal', url: 'https://i.pinimg.com/736x/b6/ba/2d/b6ba2df0553e56c00ba09e3c839cfc5d.jpg', description: 'Formal Outfit' },
-  { id: 59, category: 'Formal', url: 'https://i.pinimg.com/736x/07/9f/c6/079fc6fb462e26b897c2e73960397f2c.jpg', description: 'Formal Outfit' },
-  { id: 60, category: 'Formal', url: 'https://i.pinimg.com/736x/69/7c/bc/697cbc94768203f721c8949ca3743392.jpg', description: 'Formal Outfit' },
-  { id: 61, category: 'Formal', url: 'https://i.pinimg.com/736x/bc/15/a6/bc15a69ef674faf72aeb0607c0e9f0c4.jpg', description: 'Formal Outfit' },
-  { id: 62, category: 'Formal', url: 'https://i.pinimg.com/1200x/10/15/fc/1015fcf35a260c1ab7e5c2677063d2e9.jpg', description: 'Formal Outfit' },
-  { id: 63, category: 'Formal', url: 'https://i.pinimg.com/736x/ba/86/7b/ba867b94aa8438d30d934173fd0ba194.jpg', description: 'Formal Outfit' },
-  { id: 64, category: 'Formal', url: 'https://i.pinimg.com/736x/0c/52/1c/0c521c73339c8259d103ce6f1eacd52f.jpg', description: 'Formal Outfit' },
-
-  // Old Money
-  { id: 65, category: 'Old Money', url: 'https://i.pinimg.com/736x/66/f3/9c/66f39c6c2428234104926ea6279c6ea9.jpg', description: 'Old Money Outfit' },
-  { id: 66, category: 'Old Money', url: 'https://i.pinimg.com/736x/dd/01/a3/dd01a3877e7f8d337af68be26f91e12a.jpg', description: 'Old Money Outfit' },
-  { id: 67, category: 'Old Money', url: 'https://i.pinimg.com/736x/95/a1/08/95a1084239826a0756c561755ba405f9.jpg', description: 'Old Money Outfit' },
-  { id: 68, category: 'Old Money', url: 'https://i.pinimg.com/736x/14/b8/1b/14b81be806d11a8e7ffd24caffccb0dc.jpg', description: 'Old Money Outfit' },
-  { id: 69, category: 'Old Money', url: 'https://i.pinimg.com/736x/8a/db/ca/8adbca281bc3cfbf331ffd76a9933a90.jpg', description: 'Old Money Outfit' },
-  { id: 70, category: 'Old Money', url: 'https://i.pinimg.com/736x/8a/07/bc/8a07bc6fc1c4b56f65ecdd549c3e6483.jpg', description: 'Old Money Outfit' },
-  { id: 71, category: 'Old Money', url: 'https://i.pinimg.com/736x/98/37/04/983704d100d85e8646a9a09f28b1b957.jpg', description: 'Old Money Outfit' },
-  { id: 72, category: 'Old Money', url: 'https://i.pinimg.com/736x/4e/94/55/4e9455e3bfd13b905e2b135b36ce9d45.jpg', description: 'Old Money Outfit' },
-
-  // Cottagecore
-  { id: 73, category: 'Cottagecore', url: 'PEGAR_URL_1_AQUI', description: 'Cottagecore Outfit' },
-  { id: 74, category: 'Cottagecore', url: 'PEGAR_URL_2_AQUI', description: 'Cottagecore Outfit' },
-  { id: 75, category: 'Cottagecore', url: 'PEGAR_URL_3_AQUI', description: 'Cottagecore Outfit' },
-  { id: 76, category: 'Cottagecore', url: 'PEGAR_URL_4_AQUI', description: 'Cottagecore Outfit' },
-  { id: 77, category: 'Cottagecore', url: 'PEGAR_URL_5_AQUI', description: 'Cottagecore Outfit' },
-  { id: 78, category: 'Cottagecore', url: 'PEGAR_URL_6_AQUI', description: 'Cottagecore Outfit' },
-
-  // Coquette
-  { id: 79, category: 'Coquette', url: 'PEGAR_URL_1_AQUI', description: 'Coquette Outfit' },
-  { id: 80, category: 'Coquette', url: 'PEGAR_URL_2_AQUI', description: 'Coquette Outfit' },
-  { id: 81, category: 'Coquette', url: 'PEGAR_URL_3_AQUI', description: 'Coquette Outfit' },
-  { id: 82, category: 'Coquette', url: 'PEGAR_URL_4_AQUI', description: 'Coquette Outfit' },
-  { id: 83, category: 'Coquette', url: 'PEGAR_URL_5_AQUI', description: 'Coquette Outfit' },
-  { id: 84, category: 'Coquette', url: 'PEGAR_URL_6_AQUI', description: 'Coquette Outfit' },
-
-  // Casual
-  { id: 85, category: 'Casual', url: 'PEGAR_URL_1_AQUI', description: 'Casual Outfit' },
-  { id: 86, category: 'Casual', url: 'PEGAR_URL_2_AQUI', description: 'Casual Outfit' },
-  { id: 87, category: 'Casual', url: 'PEGAR_URL_3_AQUI', description: 'Casual Outfit' },
-  { id: 88, category: 'Casual', url: 'PEGAR_URL_4_AQUI', description: 'Casual Outfit' },
-  { id: 89, category: 'Casual', url: 'PEGAR_URL_5_AQUI', description: 'Casual Outfit' },
-  { id: 90, category: 'Casual', url: 'PEGAR_URL_6_AQUI', description: 'Casual Outfit' },
-
-  // Punk
-  { id: 91, category: 'Punk', url: 'PEGAR_URL_1_AQUI', description: 'Punk Outfit' },
-  { id: 92, category: 'Punk', url: 'PEGAR_URL_2_AQUI', description: 'Punk Outfit' },
-  { id: 93, category: 'Punk', url: 'PEGAR_URL_3_AQUI', description: 'Punk Outfit' },
-  { id: 94, category: 'Punk', url: 'PEGAR_URL_4_AQUI', description: 'Punk Outfit' },
-  { id: 95, category: 'Punk', url: 'PEGAR_URL_5_AQUI', description: 'Punk Outfit' },
-  { id: 96, category: 'Punk', url: 'PEGAR_URL_6_AQUI', description: 'Punk Outfit' },
-
-  // Fairycore
-  { id: 97, category: 'Fairycore', url: 'PEGAR_URL_1_AQUI', description: 'Fairycore Outfit' },
-  { id: 98, category: 'Fairycore', url: 'PEGAR_URL_2_AQUI', description: 'Fairycore Outfit' },
-  { id: 99, category: 'Fairycore', url: 'PEGAR_URL_3_AQUI', description: 'Fairycore Outfit' },
-  { id: 100, category: 'Fairycore', url: 'PEGAR_URL_4_AQUI', description: 'Fairycore Outfit' },
-  { id: 101, category: 'Fairycore', url: 'PEGAR_URL_5_AQUI', description: 'Fairycore Outfit' },
-  { id: 102, category: 'Fairycore', url: 'PEGAR_URL_6_AQUI', description: 'Fairycore Outfit' },
-
-  // Cosplay
-  { id: 103, category: 'Cosplay', url: 'PEGAR_URL_1_AQUI', description: 'Cosplay Outfit' },
-  { id: 104, category: 'Cosplay', url: 'PEGAR_URL_2_AQUI', description: 'Cosplay Outfit' },
-  { id: 105, category: 'Cosplay', url: 'PEGAR_URL_3_AQUI', description: 'Cosplay Outfit' },
-  { id: 106, category: 'Cosplay', url: 'PEGAR_URL_4_AQUI', description: 'Cosplay Outfit' },
-  { id: 107, category: 'Cosplay', url: 'PEGAR_URL_5_AQUI', description: 'Cosplay Outfit' },
-  { id: 108, category: 'Cosplay', url: 'PEGAR_URL_6_AQUI', description: 'Cosplay Outfit' },
-];
+const shuffledItemsByCategory = CATEGORIES.reduce<Record<Category, ExploreItem[]>>((items, category) => {
+  items[category] = shuffle(localItems.filter(item => item.category === category && item.url.startsWith('http')));
+  return items;
+}, {} as Record<Category, ExploreItem[]>);
 
 export default function App() {
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
@@ -197,8 +87,10 @@ export default function App() {
   const categoryRowRef = useRef<HTMLDivElement | null>(null);
   const [canScrollCategoriesLeft, setCanScrollCategoriesLeft] = useState(false);
   const [canScrollCategoriesRight, setCanScrollCategoriesRight] = useState(false);
+  const [failedImageIds, setFailedImageIds] = useState<Set<number | string>>(() => new Set());
 
-  const filteredItems = ITEMS.filter(item => item.category === activeCategory || activeCategory === 'All');
+  const filteredItems = shuffledItemsByCategory[activeCategory]
+    .filter(item => !failedImageIds.has(item.id));
 
   useEffect(() => {
     const categoryRow = categoryRowRef.current;
@@ -711,12 +603,15 @@ export default function App() {
                       src={item.url} 
                       alt={item.description}
                       referrerPolicy="no-referrer"
+                      onError={() => setFailedImageIds(previous => new Set(previous).add(item.id))}
                       className="w-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                      <p className="text-secondary text-xs uppercase tracking-widest font-bold">
-                        {item.description}
-                      </p>
+                      <div>
+                        <p className="text-secondary text-xs uppercase tracking-widest font-bold">
+                          {item.description}
+                        </p>
+                      </div>
                     </div>
                   </motion.div>
                 ))}

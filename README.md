@@ -15,6 +15,10 @@ View your app in AI Studio: https://ai.studio/apps/21c7125a-ba26-497c-9c84-f3640
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key if you use the AI tools.
+3. Refresh outfit images when needed:
+   `npm run cargar:fotos`
+4. Run the app:
    `npm run dev`
+
+The image loader uses Apify only from `scripts/cargarFotos.js`. React reads the generated `src/data/outfits.json` locally and never calls Apify from the browser.

@@ -6,6 +6,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import outfits from './data/outfits.json';
+import { auraItems } from './data/aura';
 import {
   Menu,
   Compass,
@@ -43,8 +44,9 @@ const CATEGORY_SEARCHES = {
 } as const;
 
 type Category = keyof typeof CATEGORY_SEARCHES;
+type ExploreCategory = Category | 'AURA';
 
-const CATEGORIES = Object.keys(CATEGORY_SEARCHES) as Category[];
+const CATEGORIES = [...Object.keys(CATEGORY_SEARCHES), 'AURA'] as ExploreCategory[];
 
 type ExploreItem = {
   id: number | string;
@@ -64,10 +66,13 @@ const shuffle = <T,>(items: T[]): T[] => {
   return shuffled;
 };
 
-const shuffledItemsByCategory = CATEGORIES.reduce<Record<Category, ExploreItem[]>>((items, category) => {
-  items[category] = shuffle(localItems.filter(item => item.category === category && item.url.startsWith('http')));
+const shuffledItemsByCategory = CATEGORIES.reduce<Record<ExploreCategory, ExploreItem[]>>((items, category) => {
+  const categoryItems = category === 'AURA'
+    ? auraItems
+    : localItems.filter(item => item.category === category && item.url.startsWith('http'));
+  items[category] = shuffle(categoryItems);
   return items;
-}, {} as Record<Category, ExploreItem[]>);
+}, {} as Record<ExploreCategory, ExploreItem[]>);
 
 export default function App() {
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);

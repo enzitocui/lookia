@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import { Router } from 'express';
 import multer from 'multer';
@@ -8,7 +9,8 @@ import { sql } from '../db.ts';
 import { requireAuth } from '../auth/requireAuth.ts';
 
 const router = Router();
-const uploadRoot = path.resolve(process.cwd(), 'uploads', 'prendas');
+const uploadsRoot = path.resolve(process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads'));
+const uploadRoot = path.join(uploadsRoot, 'prendas');
 const acceptedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const extensionsByMime: Record<string, string> = {
   'image/jpeg': '.jpg',
@@ -23,19 +25,9 @@ const upload = multer({
       const destination = path.join(uploadRoot, String(userId));
       fs.mkdir(destination, { recursive: true }).then(() => callback(null, destination), error => callback(error as Error, destination));
     },
-    filename: (_req, file, callback) => {
-      const extension = extensionsByMime[file.mimetype];
-      callback(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${extension}`);
-    },
+    filename: (_req, _file, callback) => callback(null, `${randomUUID()}.upload`),
   }),
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
-  fileFilter: (_req, file, callback) => {
-    if (!acceptedMimeTypes.has(file.mimetype)) {
-      callback(new Error('Formato no permitido. Usa JPG, JPEG, PNG o WEBP.'));
-      return;
-    }
-    callback(null, true);
-  },
 });
 
 const categoryAliases: Record<string, string[]> = {
@@ -74,16 +66,19 @@ const removeOwnedImage = async (photo: unknown, userId: number) => {
   const expectedPrefix = `/uploads/prendas/${userId}/`;
   if (!photo.startsWith(expectedPrefix)) return;
 
-  const absolutePath = path.resolve(process.cwd(), photo.slice(1));
-  const userUploadDirectory = path.join(uploadRoot, String(userId));
-  if (!absolutePath.startsWith(`${userUploadDirectory}${path.sep}`)) return;
+  const filename = photo.slice(expectedPrefix.length);
+  if (!filename || path.basename(filename) !== filename) return;
+  const absolutePath = path.join(uploadRoot, String(userId), filename);
   await fs.unlink(absolutePath).catch(() => {});
 };
 
 const processUpload = (req: Request, res: Response, next: NextFunction) => {
   upload.single('file')(req, res, error => {
     if (error) {
-      res.status(400).json({ error: error.message || 'No se pudo procesar la imagen.' });
+      const message = error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE'
+        ? 'La imagen debe pesar menos de 5 MB.'
+        : error.message || 'No se pudo procesar la imagen.';
+      res.status(400).json({ error: message });
       return;
     }
     next();
@@ -120,20 +115,25 @@ router.post('/', processUpload, async (req, res) => {
     return res.status(400).json({ error: 'Completá el tipo, subtipo y color de la prenda.' });
   }
 
+  let storedPath = file.path;
   try {
     const detectedType = await fileTypeFromFile(file.path);
-    if (!detectedType || !acceptedMimeTypes.has(detectedType.mime) || detectedType.mime !== file.mimetype) {
+    if (!detectedType || !acceptedMimeTypes.has(detectedType.mime)) {
       await fs.unlink(file.path).catch(() => {});
-      return res.status(400).json({ error: 'El archivo no es una imagen JPG, PNG o WEBP válida.' });
+      return res.status(400).json({ error: 'El archivo no es una imagen JPG, JPEG o PNG válida.' });
     }
+
+    const extension = extensionsByMime[detectedType.mime];
+    storedPath = path.join(path.dirname(file.path), `${randomUUID()}${extension}`);
+    await fs.rename(file.path, storedPath);
 
     const catalogSelection = await getCatalogSelection(tipo, subTipo);
     if (!catalogSelection) {
-      await fs.unlink(file.path).catch(() => {});
+      await fs.unlink(storedPath).catch(() => {});
       return res.status(400).json({ error: 'El tipo y subtipo seleccionados no son válidos.' });
     }
 
-    const photo = `/uploads/prendas/${userId}/${file.filename}`;
+    const photo = `/uploads/prendas/${userId}/${path.basename(storedPath)}`;
     const [prenda] = await sql`
       INSERT INTO public.prendas (tipo, sub_tipo, foto, color, id_users)
       VALUES (${catalogSelection.tipo}, ${catalogSelection.sub_tipo}, ${photo}, ${color}, ${userId})
@@ -142,6 +142,7 @@ router.post('/', processUpload, async (req, res) => {
 
     return res.status(201).json({ prenda });
   } catch (error) {
+    await fs.unlink(storedPath).catch(() => {});
     await fs.unlink(file.path).catch(() => {});
     console.error('Error al crear prenda:', error);
     return res.status(500).json({ error: 'No se pudo guardar la prenda.' });

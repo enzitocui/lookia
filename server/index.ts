@@ -14,6 +14,7 @@ import { requireAuth } from './auth/requireAuth.ts';
 
 const app = express();
 const port = Number(process.env.PORT || 3001);
+const uploadsRoot = path.resolve(process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads'));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -38,8 +39,8 @@ app.use('/uploads/prendas', requireAuth, (req, res, next) => {
     return res.sendStatus(404);
   }
   return next();
-}, express.static(path.join(process.cwd(), 'uploads', 'prendas')));
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+}, express.static(path.join(uploadsRoot, 'prendas')));
+app.use('/uploads', express.static(uploadsRoot));
 
 app.get('/api/health', async (_req, res) => {
   try {

@@ -192,12 +192,14 @@ export default function App() {
   const [garmentForm, setGarmentForm] = useState<GarmentForm>({ tipo: '', sub_tipo: '', color: '' });
   const [garmentSaving, setGarmentSaving] = useState(false);
   const [garmentError, setGarmentError] = useState<string | null>(null);
+  const [garmentSuccess, setGarmentSuccess] = useState<string | null>(null);
   const [editingGarmentId, setEditingGarmentId] = useState<number | null>(null);
   const [editingGarmentForm, setEditingGarmentForm] = useState<GarmentForm>({ tipo: '', sub_tipo: '', color: '' });
   const [deletingGarmentId, setDeletingGarmentId] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const profileFileInputRef = useRef<HTMLInputElement | null>(null);
+  const initialSessionCheckStartedRef = useRef(false);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
   const firstSidebarItemRef = useRef<HTMLButtonElement | null>(null);
   const categoryRowRef = useRef<HTMLDivElement | null>(null);
@@ -230,6 +232,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (initialSessionCheckStartedRef.current) return;
+    initialSessionCheckStartedRef.current = true;
     void refreshCurrentUser();
   }, [refreshCurrentUser]);
 
@@ -246,8 +250,8 @@ export default function App() {
     }
   }, [currentUser]);
 
-  const loadWardrobe = useCallback(async () => {
-    if (!currentUser) return;
+  const loadWardrobe = useCallback(async (): Promise<boolean> => {
+    if (!currentUser) return false;
     setWardrobeLoading(true);
     setWardrobeError(null);
     try {
@@ -270,15 +274,17 @@ export default function App() {
       setWardrobeSubtypes(subtypes as WardrobeSubtype[]);
       setGarments(ownedGarments as Garment[]);
       setCatalogsLoaded(true);
+      return true;
     } catch (error) {
       setWardrobeError(error instanceof Error ? error.message : 'No se pudo cargar tu ropero.');
+      return false;
     } finally {
       setWardrobeLoading(false);
     }
   }, [currentUser]);
 
   useEffect(() => {
-    if (currentUser && ['mi-ropa', 'camera'].includes(activeNav)) void loadWardrobe();
+    if (currentUser && activeNav === 'mi-ropa') void loadWardrobe();
   }, [activeNav, currentUser, loadWardrobe]);
 
   const selectedType = wardrobeTypes.find(type => normalizeWardrobeCategory(type.tipo) === selectedWardrobeCategory);
@@ -453,24 +459,42 @@ export default function App() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) {
       return;
     }
 
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setCameraError('Elegí una imagen JPG, PNG o WEBP');
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    const allowedExtensions = new Set(['jpg', 'jpeg', 'png', 'webp']);
+    const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+    const validFile = allowedExtensions.has(extension ?? '') || allowedMimeTypes.has(file.type.toLowerCase());
+    if (!validFile) {
+      setUploadFile(null);
+      setFilePreviewUrl(null);
+      setUploadConfirmed(false);
+      setCameraError('El archivo no es válido. Elegí una imagen JPG, JPEG o PNG.');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
+      setUploadFile(null);
+      setFilePreviewUrl(null);
+      setUploadConfirmed(false);
       setCameraError('La imagen debe pesar menos de 5 MB.');
       return;
     }
 
-    setCameraError(null);
-    setUploadConfirmed(false);
-    setUploadFile(file);
-    setFilePreviewUrl(URL.createObjectURL(file));
-    setUploadMode('file');
+    try {
+      setCameraError(null);
+      setGarmentError(null);
+      setGarmentSuccess(null);
+      setUploadConfirmed(false);
+      setUploadFile(file);
+      setFilePreviewUrl(URL.createObjectURL(file));
+      setUploadMode('file');
+    } catch {
+      setUploadFile(null);
+      setCameraError('No se pudo mostrar la vista previa. Probá con otra imagen.');
+    }
   };
 
   const selectUploadMode = (mode: 'camera' | 'file') => {
@@ -479,13 +503,12 @@ export default function App() {
     setUploadConfirmed(false);
     setUploadFile(null);
     setGarmentError(null);
+    setGarmentSuccess(null);
     setGarmentForm({ tipo: selectedType?.tipo ?? '', sub_tipo: '', color: '' });
     if (mode === 'file') {
-      if (!catalogsLoaded) void loadWardrobe();
       openFilePicker();
       return;
     }
-    if (!catalogsLoaded) void loadWardrobe();
     setUploadMode(mode);
   };
 
@@ -511,10 +534,18 @@ export default function App() {
     setCameraError(null);
   };
 
-  const continueWithGarmentDetails = () => {
+  const continueWithGarmentDetails = async () => {
     if (!uploadFile) {
       setCameraError('Seleccioná una imagen antes de continuar.');
       return;
+    }
+    setCameraError(null);
+    if (!catalogsLoaded) {
+      const catalogsAvailable = await loadWardrobe();
+      if (!catalogsAvailable) {
+        setCameraError('No se pudieron cargar los tipos y subtipos. Intentá nuevamente.');
+        return;
+      }
     }
     setUploadConfirmed(true);
     setUploadMode('file');
@@ -530,6 +561,7 @@ export default function App() {
     }
     setGarmentSaving(true);
     setGarmentError(null);
+    setGarmentSuccess(null);
     try {
       const formData = new FormData();
       formData.append('file', uploadFile);
@@ -553,6 +585,7 @@ export default function App() {
       setCameraError(null);
       setGarmentForm({ tipo: '', sub_tipo: '', color: '' });
       await loadWardrobe();
+      setGarmentSuccess('La prenda se guardó correctamente en tu ropero.');
       setActiveNav('mi-ropa');
     } catch (error) {
       setGarmentError(error instanceof Error ? error.message : 'No se pudo guardar la prenda.');
@@ -732,6 +765,8 @@ export default function App() {
       // Ignored: UI should reset locally even if the request fails.
     } finally {
       setCurrentUser(null);
+      setGarments([]);
+      setGarmentSuccess(null);
       setAuthState('guest');
       setAuthForm(AUTH_FORM_INITIAL);
       setActiveNav('compass');
@@ -761,6 +796,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen app-shell selection:bg-secondary/30 overflow-x-hidden">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+        className="sr-only"
+        onChange={handleFileChange}
+        aria-label="Seleccionar imagen de una prenda"
+      />
       <aside
         id="sidebar"
         ref={sidebarRef}
@@ -934,8 +977,6 @@ export default function App() {
             renderGuestAccessPanel()
           ) : activeNav === 'camera' ? (
             <section className={`upload-page ${uploadMode === 'camera' ? 'upload-page--camera' : ''}`}>
-              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={handleFileChange} />
-
               {uploadMode === 'choose' ? (
                 <div className="upload-choice panel rounded-3xl">
                   <div className="upload-heading">
@@ -943,6 +984,7 @@ export default function App() {
                     <h2 className="font-headline">¿Qué querés hacer?</h2>
                     <p className="text-muted">Elegí cómo querés agregar una nueva prenda.</p>
                   </div>
+                  {cameraError && <p className="upload-error" role="alert">{cameraError}</p>}
                   <div className="upload-options">
                     <button type="button" className="upload-option" onClick={() => selectUploadMode('file')}>
                       <span className="upload-option-icon"><Upload size={28} /></span>
@@ -992,7 +1034,7 @@ export default function App() {
                   ) : null}
                   {cameraError && <p className="upload-error" role="alert">{cameraError}</p>}
                   {!uploadConfirmed && <div className="upload-actions">
-                    <button type="button" className="btn-accent rounded-full px-6 py-3" onClick={continueWithGarmentDetails}><Check size={18} /> Continuar</button>
+                    <button type="button" disabled={wardrobeLoading} className="btn-accent rounded-full px-6 py-3" onClick={continueWithGarmentDetails}><Check size={18} /> {wardrobeLoading ? 'Cargando opciones…' : 'Continuar'}</button>
                     <button type="button" className="btn-outline rounded-full px-6 py-3" onClick={openFilePicker}><RotateCcw size={18} /> Elegir otra</button>
                     <button type="button" className="btn-outline rounded-full px-6 py-3" onClick={() => { setUploadMode('choose'); setUploadFile(null); setFilePreviewUrl(null); }}><X size={18} /> Cancelar</button>
                   </div>}
@@ -1006,7 +1048,7 @@ export default function App() {
                   {cameraError && <p className="upload-error" role="alert">{cameraError}</p>}
                   {cameraCaptureUrl ? (
                     <div className="upload-actions">
-                      <button type="button" className="btn-accent rounded-full px-6 py-3" onClick={continueWithGarmentDetails}><Check size={18} /> Usar esta foto</button>
+                      <button type="button" disabled={wardrobeLoading} className="btn-accent rounded-full px-6 py-3" onClick={continueWithGarmentDetails}><Check size={18} /> {wardrobeLoading ? 'Cargando opciones…' : 'Usar esta foto'}</button>
                       <button type="button" className="btn-outline rounded-full px-6 py-3" onClick={() => { setCameraCaptureUrl(null); setFilePreviewUrl(null); setUploadFile(null); }}><RotateCcw size={18} /> Repetir</button>
                     </div>
                   ) : <button type="button" onClick={() => void handleCameraCapture()} className="btn-accent upload-capture-button rounded-full p-4 shadow-lg" aria-label="Capturar foto"><Camera size={28} /></button>}
@@ -1018,8 +1060,9 @@ export default function App() {
             !currentUser ? renderGuestAccessPanel() : <section className="wardrobe-page">
               <div className="wardrobe-heading">
                 <div><span className="section-label">LOOKIA · TU ESPACIO</span><h2 className="font-headline">Mi ropero</h2></div>
-                <button type="button" className="btn-accent rounded-full px-5 py-3" onClick={() => { setActiveNav('camera'); setUploadMode('choose'); setUploadConfirmed(false); setUploadFile(null); setFilePreviewUrl(null); }}>Agregar prenda</button>
+                <button type="button" disabled={wardrobeLoading} className="btn-accent rounded-full px-5 py-3" onClick={() => { setActiveNav('camera'); setUploadMode('choose'); setUploadConfirmed(false); setUploadFile(null); setFilePreviewUrl(null); }}>Agregar prenda</button>
               </div>
+              {garmentSuccess && <p className="wardrobe-message wardrobe-message--success" role="status">{garmentSuccess}</p>}
               <div className="wardrobe-categories" role="tablist" aria-label="Categorías del ropero">
                 {WARDROBE_CATEGORIES.map(category => <button key={category} type="button" role="tab" aria-selected={selectedWardrobeCategory === category} className={`wardrobe-category ${selectedWardrobeCategory === category ? 'wardrobe-category--active' : ''}`} onClick={() => { setSelectedWardrobeCategory(category); setSelectedWardrobeSubtype(''); }}>{category}</button>)}
               </div>
@@ -1036,7 +1079,7 @@ export default function App() {
                   <span className="wardrobe-empty-icon"><Shirt size={30} /></span>
                   <h3 className="font-headline">{garments.length === 0 && !selectedWardrobeSubtype ? 'Tu ropero está vacío.' : 'No tenés prendas en esta categoría todavía.'}</h3>
                   <p className="text-muted">Agregá una prenda para empezar a organizar tus looks.</p>
-                  <button type="button" className="btn-accent rounded-full px-5 py-3" onClick={() => { setActiveNav('camera'); setUploadMode('choose'); setUploadConfirmed(false); }}>Agregar prenda</button>
+                  <button type="button" disabled={wardrobeLoading} className="btn-accent rounded-full px-5 py-3" onClick={() => { setActiveNav('camera'); setUploadMode('choose'); setUploadConfirmed(false); }}>Agregar prenda</button>
                 </div>
               ) : <div className="wardrobe-grid">
                 {visibleGarments.map(garment => <article key={garment.id_prendas} className="garment-card panel">

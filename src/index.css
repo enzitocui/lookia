@@ -1177,6 +1177,7 @@ input, textarea, select, button {
 .wardrobe-empty-icon { display: grid; width: 3.75rem; height: 3.75rem; place-items: center; color: var(--accent-light); background: rgba(var(--accent-rgb), 0.13); border-radius: 1.2rem; }
 .wardrobe-message { margin: 0.75rem 0; text-align: center; font-size: 0.9rem; }
 .wardrobe-message--error { color: var(--accent-light); }
+.wardrobe-message--success { color: var(--primary-light); }
 
 .outfit-builder {
   width: min(100%, 72rem);

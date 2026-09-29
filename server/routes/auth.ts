@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import bcrypt from 'bcryptjs';
 import { sql } from '../db.ts';
 
@@ -19,6 +19,18 @@ const sanitizeUser = (user: Record<string, any>) => ({
 });
 
 const requireString = (value: unknown, fallback = '') => String(value ?? fallback).trim();
+
+const establishUserSession = (req: Request, userId: number) => new Promise<void>((resolve, reject) => {
+  req.session.regenerate(error => {
+    if (error) {
+      reject(error);
+      return;
+    }
+
+    req.session.userId = userId;
+    req.session.save(saveError => saveError ? reject(saveError) : resolve());
+  });
+});
 
 router.post('/register', async (req, res) => {
   const nombre = requireString(req.body?.nombre);
@@ -107,7 +119,7 @@ router.post('/register', async (req, res) => {
         pais;
     `;
 
-    req.session.userId = Number(createdUser.id_users);
+    await establishUserSession(req, Number(createdUser.id_users));
     return res.status(201).json({
       message: 'Registro exitoso.',
       user: sanitizeUser(createdUser),
@@ -145,8 +157,6 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Credenciales inválidas.' });
     }
 
-    req.session.userId = Number(user.id_users);
-
     const [updatedUser] = await sql`
       UPDATE public.users
       SET last_login = NOW(), update_dt = NOW()
@@ -164,6 +174,8 @@ router.post('/login', async (req, res) => {
         fecha_nacimiento,
         pais;
     `;
+
+    await establishUserSession(req, Number(user.id_users));
 
     return res.json({
       message: 'Inicio de sesión exitoso.',

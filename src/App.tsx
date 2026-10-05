@@ -159,6 +159,7 @@ export default function App() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [uploadMode, setUploadMode] = useState<'choose' | 'camera' | 'file'>('choose');
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const [previewImageError, setPreviewImageError] = useState(false);
   const [uploadConfirmed, setUploadConfirmed] = useState(false);
   const [cameraCaptureUrl, setCameraCaptureUrl] = useState<string | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -464,17 +465,6 @@ export default function App() {
       return;
     }
 
-    const extension = file.name.split('.').pop()?.toLowerCase();
-    const allowedExtensions = new Set(['jpg', 'jpeg', 'png', 'webp']);
-    const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
-    const validFile = allowedExtensions.has(extension ?? '') || allowedMimeTypes.has(file.type.toLowerCase());
-    if (!validFile) {
-      setUploadFile(null);
-      setFilePreviewUrl(null);
-      setUploadConfirmed(false);
-      setCameraError('El archivo no es válido. Elegí una imagen JPG, JPEG o PNG.');
-      return;
-    }
     if (file.size > 5 * 1024 * 1024) {
       setUploadFile(null);
       setFilePreviewUrl(null);
@@ -489,6 +479,7 @@ export default function App() {
       setGarmentSuccess(null);
       setUploadConfirmed(false);
       setUploadFile(file);
+      setPreviewImageError(false);
       setFilePreviewUrl(URL.createObjectURL(file));
       setUploadMode('file');
     } catch {
@@ -502,6 +493,8 @@ export default function App() {
     setCameraCaptureUrl(null);
     setUploadConfirmed(false);
     setUploadFile(null);
+    setFilePreviewUrl(null);
+    setPreviewImageError(false);
     setGarmentError(null);
     setGarmentSuccess(null);
     setGarmentForm({ tipo: selectedType?.tipo ?? '', sub_tipo: '', color: '' });
@@ -529,6 +522,7 @@ export default function App() {
     const file = new File([blob], `lookia-${Date.now()}.jpg`, { type: 'image/jpeg' });
     const previewUrl = URL.createObjectURL(blob);
     setUploadFile(file);
+    setPreviewImageError(false);
     setCameraCaptureUrl(previewUrl);
     setFilePreviewUrl(previewUrl);
     setCameraError(null);
@@ -799,7 +793,7 @@ export default function App() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+        accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp,.svg,.avif"
         className="sr-only"
         onChange={handleFileChange}
         aria-label="Seleccionar imagen de una prenda"
@@ -1004,7 +998,13 @@ export default function App() {
                     <span className="section-label">Vista previa</span>
                     <h2 className="font-headline">Así se ve tu prenda</h2>
                   </div>
-                  {filePreviewUrl && <img src={filePreviewUrl} alt="Vista previa de la prenda seleccionada" className="upload-preview-image" />}
+                  {filePreviewUrl && (previewImageError ? (
+                    <div className="upload-preview-fallback" role="status">
+                      <FileImage size={30} aria-hidden="true" />
+                      <span>El navegador no puede mostrar la vista previa de este formato.</span>
+                      <small>{uploadFile?.name}</small>
+                    </div>
+                  ) : <img src={filePreviewUrl} alt="Vista previa de la prenda seleccionada" className="upload-preview-image" onError={() => setPreviewImageError(true)} />)}
                   {uploadConfirmed ? (
                     <form className="wardrobe-garment-form panel-alt" onSubmit={handleGarmentSubmit}>
                       <h3 className="font-headline text-xl text-secondary">Datos de la prenda</h3>
@@ -1036,7 +1036,7 @@ export default function App() {
                   {!uploadConfirmed && <div className="upload-actions">
                     <button type="button" disabled={wardrobeLoading} className="btn-accent rounded-full px-6 py-3" onClick={continueWithGarmentDetails}><Check size={18} /> {wardrobeLoading ? 'Cargando opciones…' : 'Continuar'}</button>
                     <button type="button" className="btn-outline rounded-full px-6 py-3" onClick={openFilePicker}><RotateCcw size={18} /> Elegir otra</button>
-                    <button type="button" className="btn-outline rounded-full px-6 py-3" onClick={() => { setUploadMode('choose'); setUploadFile(null); setFilePreviewUrl(null); }}><X size={18} /> Cancelar</button>
+                        <button type="button" className="btn-outline rounded-full px-6 py-3" onClick={() => { setUploadMode('choose'); setUploadFile(null); setFilePreviewUrl(null); setPreviewImageError(false); }}><X size={18} /> Cancelar</button>
                   </div>}
                 </div>
               ) : (

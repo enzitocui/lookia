@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react';
-import { Check, Image as ImageIcon, Lightbulb, Sparkles } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Check, Image as ImageIcon, Lightbulb, Sparkles, X } from 'lucide-react';
 
 export type OutfitResult = {
   garments: Array<{
@@ -20,8 +20,24 @@ export type OutfitResult = {
     tips: string[];
     complementaryItems: string[];
   };
+  evaluation?: string;
   wardrobeMessage?: string;
 };
+
+const previewGarments = [
+  { id: 'preview-garment-1', name: 'Prenda 1', category: 'Espacio para prenda' },
+  { id: 'preview-garment-2', name: 'Prenda 2', category: 'Espacio para prenda' },
+  { id: 'preview-garment-3', name: 'Prenda 3', category: 'Espacio para prenda' },
+];
+
+const previewReferences = [
+  { id: 'preview-reference-1', alt: 'Espacio para imagen de referencia' },
+  { id: 'preview-reference-2', alt: 'Espacio para imagen de referencia' },
+  { id: 'preview-reference-3', alt: 'Espacio para imagen de referencia' },
+];
+
+const previewRecommendation = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae justo vel neque malesuada consequat. Suspendisse potenti. Curabitur at lectus sed arcu feugiat varius, ut posuere sem facilisis.';
+const previewEvaluation = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent euismod, erat sed commodo consequat, tellus justo tincidunt nibh, a volutpat sapien nisl non urna.';
 
 type OutfitBuilderProps = {
   result?: OutfitResult | null;
@@ -29,39 +45,12 @@ type OutfitBuilderProps = {
 
 export default function OutfitBuilder({ result = null }: OutfitBuilderProps) {
   const [request, setRequest] = useState('');
-  const [generatedResult, setGeneratedResult] = useState<OutfitResult | null>(result);
-  const [error, setError] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const prompt = request.trim();
-    if (!prompt || isGenerating) return;
-
-    setIsGenerating(true);
-    setError('');
-    setGeneratedResult(null);
-
-    try {
-      const response = await fetch('/api/outfits/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ request: prompt })
-      });
-      const data = await response.json().catch(() => ({})) as Partial<OutfitResult> & { error?: string };
-      if (!response.ok) {
-        throw new Error(data.error || 'No pudimos generar el outfit. Intentá nuevamente.');
-      }
-      if (!Array.isArray(data.garments) || !Array.isArray(data.references) || !data.explanation) {
-        throw new Error('Recibimos una respuesta incompleta. Intentá nuevamente.');
-      }
-      setGeneratedResult(data as OutfitResult);
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'No pudimos generar el outfit. Intentá nuevamente.');
-    } finally {
-      setIsGenerating(false);
-    }
+    if (!request.trim()) return;
+    setIsPreviewOpen(true);
   };
 
   return (
@@ -69,7 +58,7 @@ export default function OutfitBuilder({ result = null }: OutfitBuilderProps) {
       <div className="outfit-builder-heading">
         <span className="section-label">LOOKIA · TU ESTILO, A TU MANERA</span>
         <h2 id="outfit-page-title" className="font-headline">Creá tu outfit</h2>
-        <p>Contanos qué outfit estás buscando y LOOKIA se encargará de encontrar la combinación adecuada.</p>
+        <p>Contanos qué outfit estás buscando. La generación estará disponible próximamente.</p>
       </div>
 
       <form className="outfit-request panel" onSubmit={handleSubmit}>
@@ -80,59 +69,108 @@ export default function OutfitBuilder({ result = null }: OutfitBuilderProps) {
           id="outfit-request"
           value={request}
           maxLength={1000}
-          disabled={isGenerating}
           onChange={event => {
             setRequest(event.target.value);
-            if (error) setError('');
-            if (generatedResult) setGeneratedResult(null);
           }}
           placeholder="Ejemplo: Quiero un outfit estilo Y2K para salir con amigos..."
           rows={6}
         />
         <div className="outfit-request-footer">
           <p>Podés describir libremente la ocasión, el estilo o cómo querés sentirte.</p>
-          <button type="submit" className="btn-accent rounded-full px-6 py-3" disabled={!request.trim() || isGenerating}>
-            <Sparkles size={18} aria-hidden="true" className={isGenerating ? 'outfit-generating-icon' : undefined} />
-            {isGenerating ? 'Generando outfit…' : 'Generar outfit'}
+          <button type="submit" className="btn-accent rounded-full px-6 py-3" disabled={!request.trim()}>
+            <Sparkles size={18} aria-hidden="true" />
+            Generar outfit
           </button>
         </div>
-        {error && <p className="outfit-feedback-error" role="alert">{error}</p>}
-        {isGenerating && <p className="outfit-request-notice" role="status">Estamos revisando las referencias y tu ropero. Esto puede tardar unos segundos.</p>}
       </form>
 
-      {generatedResult && <OutfitResultView result={generatedResult} />}
+      {isPreviewOpen && <OutfitResultView result={result} onClose={() => setIsPreviewOpen(false)} />}
     </section>
   );
 }
 
-function OutfitResultView({ result }: { result: OutfitResult }) {
+function OutfitResultView({ result, onClose }: { result: OutfitResult | null; onClose: () => void }) {
+  const dialogRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
   return (
-    <section className="outfit-result" aria-labelledby="outfit-result-title">
-      <h3 id="outfit-result-title" className="font-headline">Tu propuesta</h3>
-      <div className="outfit-result-grid">
-        <section className="outfit-result-column panel" aria-labelledby="outfit-garments-title">
-          <h4 id="outfit-garments-title"><Check size={18} /> Prendas elegidas</h4>
-          <div className="outfit-garment-list">
-            {result.garments.length > 0
-              ? result.garments.map(garment => <OutfitGarmentCard key={garment.id} garment={garment} />)
-              : <p className="outfit-empty-wardrobe">{result.wardrobeMessage || 'No hay prendas compatibles para mostrar.'}</p>}
+    <div className="outfit-preview-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="outfit-preview-modal" role="dialog" aria-modal="true" aria-labelledby="outfit-result-title" tabIndex={-1} ref={dialogRef}>
+        <header className="outfit-preview-header">
+          <div>
+            <span className="section-label">LOOKIA · VISTA PREVIA</span>
+            <h3 id="outfit-result-title" className="font-headline">Tu propuesta de outfit</h3>
+            <p>Diseño de muestra · la generación todavía no está conectada</p>
           </div>
-        </section>
+          <button type="button" className="icon-button outfit-preview-close" aria-label="Cerrar ventana" onClick={onClose}><X size={22} /></button>
+        </header>
+        <div className="outfit-result-grid">
+          <section className="outfit-result-column panel" aria-labelledby="outfit-garments-title">
+            <h4 id="outfit-garments-title"><Check size={18} /> Prendas seleccionadas</h4>
+            <div className="outfit-garment-list">
+              {result
+                ? result.garments.length > 0
+                  ? result.garments.map(garment => <OutfitGarmentCard key={garment.id} garment={garment} />)
+                  : <p className="outfit-empty-wardrobe">{result.wardrobeMessage || 'No hay prendas seleccionadas para mostrar.'}</p>
+                : previewGarments.map(garment => <OutfitGarmentPlaceholder key={garment.id} garment={garment} />)}
+            </div>
+          </section>
 
-        <section className="outfit-result-column panel" aria-labelledby="outfit-references-title">
-          <h4 id="outfit-references-title"><ImageIcon size={18} /> Referencias</h4>
-          <div className="outfit-reference-list">
-            {result.references.map(reference => (
-              <figure className="outfit-reference-card" key={reference.id}>
-                <img src={reference.imageUrl} alt={reference.alt} loading="lazy" />
-              </figure>
-            ))}
-          </div>
-        </section>
+          <section className="outfit-result-column panel" aria-labelledby="outfit-references-title">
+            <h4 id="outfit-references-title"><ImageIcon size={18} /> Imágenes de referencia</h4>
+            <div className="outfit-reference-list">
+              {result
+                ? result.references.length > 0
+                  ? result.references.map(reference => (
+                  <figure className="outfit-reference-card" key={reference.id}>
+                    <img src={reference.imageUrl} alt={reference.alt} loading="lazy" />
+                  </figure>
+                  ))
+                  : <p className="outfit-empty-wardrobe">No hay imágenes de referencia para mostrar.</p>
+                : previewReferences.map(reference => <ReferenceImagePlaceholder key={reference.id} reference={reference} />)}
+            </div>
+          </section>
 
-        <OutfitExplanation explanation={result.explanation} />
-      </div>
-    </section>
+          <OutfitExplanation
+            recommendation={result?.explanation.requestMatch ?? previewRecommendation}
+            evaluation={result?.evaluation ?? previewEvaluation}
+            isPlaceholder={!result}
+            explanation={result?.explanation}
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function OutfitGarmentPlaceholder({ garment }: { garment: typeof previewGarments[number] }) {
+  return (
+    <article className="outfit-garment-card outfit-garment-placeholder">
+      <div className="outfit-garment-image-placeholder" aria-hidden="true"><ImageIcon size={25} /></div>
+      <div><span>{garment.category}</span><h5>{garment.name}</h5></div>
+    </article>
+  );
+}
+
+function ReferenceImagePlaceholder({ reference }: { reference: typeof previewReferences[number] }) {
+  return (
+    <figure className="outfit-reference-card outfit-reference-placeholder" role="img" aria-label={reference.alt}>
+      <ImageIcon size={28} aria-hidden="true" />
+      <span>Espacio para imagen</span>
+    </figure>
   );
 }
 
@@ -149,17 +187,35 @@ function OutfitGarmentCard({ garment }: { garment: OutfitResult['garments'][numb
   );
 }
 
-function OutfitExplanation({ explanation }: { explanation: OutfitResult['explanation'] }) {
+function OutfitExplanation({
+  recommendation,
+  evaluation,
+  isPlaceholder,
+  explanation,
+}: {
+  recommendation: string;
+  evaluation: string;
+  isPlaceholder: boolean;
+  explanation?: OutfitResult['explanation'];
+}) {
   return (
     <section className="outfit-result-column outfit-explanation panel" aria-labelledby="outfit-explanation-title">
-      <h4 id="outfit-explanation-title"><Lightbulb size={18} /> Por qué este outfit</h4>
-      <p>{explanation.requestMatch}</p>
-      <h5>La combinación</h5>
-      <ul>{explanation.reasons.map((reason, index) => <li key={`${index}-${reason}`}>{reason}</li>)}</ul>
-      <h5>Consejos</h5>
-      <ul>{explanation.tips.map((tip, index) => <li key={`${index}-${tip}`}>{tip}</li>)}</ul>
-      <h5>Para complementar tu ropero</h5>
-      <ul>{explanation.complementaryItems.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul>
+      <h4 id="outfit-explanation-title"><Lightbulb size={18} /> Recomendación / evaluación de IA</h4>
+      <div className="outfit-copy-section">
+        <h5>Recomendación de IA</h5>
+        {isPlaceholder && <span className="outfit-copy-demo-label">Texto de muestra · Lorem Ipsum</span>}
+        <p>{recommendation}</p>
+      </div>
+      <div className="outfit-copy-section outfit-evaluation-section">
+        <h5>Evaluación del outfit</h5>
+        {isPlaceholder && <span className="outfit-copy-demo-label">Texto de muestra · Lorem Ipsum</span>}
+        <p>{evaluation}</p>
+      </div>
+      {explanation && <div className="outfit-future-details">
+        {explanation.reasons.length > 0 && <><h5>Por qué se eligieron las prendas</h5><ul>{explanation.reasons.map((reason, index) => <li key={`${index}-${reason}`}>{reason}</li>)}</ul></>}
+        {explanation.tips.length > 0 && <><h5>Observaciones</h5><ul>{explanation.tips.map((tip, index) => <li key={`${index}-${tip}`}>{tip}</li>)}</ul></>}
+        {explanation.complementaryItems.length > 0 && <><h5>Para complementar tu ropero</h5><ul>{explanation.complementaryItems.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul></>}
+      </div>}
     </section>
   );
 }

@@ -5,17 +5,56 @@ import type { NextFunction, Request, Response } from 'express';
 import { Router } from 'express';
 import multer from 'multer';
 import { fileTypeFromFile } from 'file-type';
+import { DOMParser, XMLSerializer } from '@xmldom/xmldom';
 import { sql } from '../db.ts';
 import { requireAuth } from '../auth/requireAuth.ts';
 
 const router = Router();
 const uploadsRoot = path.resolve(process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads'));
 const uploadRoot = path.join(uploadsRoot, 'prendas');
-const acceptedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const extensionsByMime: Record<string, string> = {
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp',
+const extensionsByMime: Record<string, string> = { 'image/jpeg': '.jpg' };
+
+const sanitizeSvg = (contents: string) => {
+  if (/<!DOCTYPE|<!ENTITY/i.test(contents)) return null;
+  let hasParseError = false;
+  const document = new DOMParser({
+    onError: level => {
+      if (level !== 'warning') hasParseError = true;
+    },
+  }).parseFromString(contents, 'image/svg+xml');
+  const root = document.documentElement;
+  if (hasParseError || root?.localName.toLowerCase() !== 'svg'
+    || (root.namespaceURI && root.namespaceURI !== 'http://www.w3.org/2000/svg')) return null;
+  if (!root.namespaceURI) root.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+  const blockedElements = new Set([
+    'script', 'style', 'foreignobject', 'iframe', 'object', 'embed', 'audio', 'video',
+    'animate', 'animatemotion', 'animatetransform', 'set',
+  ]);
+  const elements = document.getElementsByTagName('*');
+  for (let elementIndex = elements.length - 1; elementIndex >= 0; elementIndex -= 1) {
+    const element = elements.item(elementIndex);
+    if (!element) continue;
+    if (blockedElements.has(element.localName.toLowerCase())) {
+      element.parentNode?.removeChild(element);
+      continue;
+    }
+
+    for (let attributeIndex = element.attributes.length - 1; attributeIndex >= 0; attributeIndex -= 1) {
+      const attribute = element.attributes.item(attributeIndex);
+      if (!attribute) continue;
+      const name = attribute.localName.toLowerCase();
+      const value = attribute.value.trim();
+      const unsafeReference = /^(?:href|src)$/i.test(name) && value !== '' && !value.startsWith('#');
+      const unsafeUrlFunction = /url\s*\(\s*(['"]?)(?!#)[^)]*\)/i.test(value);
+      const unsafeStyle = name === 'style' && (/expression\s*\(|@import/i.test(value));
+      if (name.startsWith('on') || unsafeReference || unsafeUrlFunction || unsafeStyle || /javascript\s*:/i.test(value)) {
+        element.removeAttributeNode(attribute);
+      }
+    }
+  }
+
+  return new XMLSerializer().serializeToString(document);
 };
 
 const upload = multer({
@@ -118,14 +157,26 @@ router.post('/', processUpload, async (req, res) => {
   let storedPath = file.path;
   try {
     const detectedType = await fileTypeFromFile(file.path);
-    if (!detectedType || !acceptedMimeTypes.has(detectedType.mime)) {
+    const safeSvg = !detectedType || detectedType.mime === 'image/svg+xml'
+      ? sanitizeSvg(await fs.readFile(file.path, 'utf8'))
+      : null;
+    const isSvg = detectedType?.mime === 'image/svg+xml' || safeSvg !== null;
+    if ((detectedType?.mime === 'image/svg+xml' && safeSvg === null)
+      || (!detectedType?.mime.startsWith('image/') && safeSvg === null)) {
       await fs.unlink(file.path).catch(() => {});
-      return res.status(400).json({ error: 'El archivo no es una imagen JPG, JPEG o PNG válida.' });
+      return res.status(400).json({ error: 'El contenido del archivo no es una imagen válida.' });
     }
 
-    const extension = extensionsByMime[detectedType.mime];
+    const extension = isSvg || detectedType?.mime === 'image/svg+xml'
+      ? '.svg'
+      : extensionsByMime[detectedType!.mime] || `.${detectedType!.ext}`;
     storedPath = path.join(path.dirname(file.path), `${randomUUID()}${extension}`);
-    await fs.rename(file.path, storedPath);
+    if (safeSvg !== null) {
+      await fs.writeFile(storedPath, safeSvg, 'utf8');
+      await fs.unlink(file.path);
+    } else {
+      await fs.rename(file.path, storedPath);
+    }
 
     const catalogSelection = await getCatalogSelection(tipo, subTipo);
     if (!catalogSelection) {

@@ -33,6 +33,22 @@ export interface User {
   pais: string | null;
 }
 
+export interface SavedOutfitGarment {
+  id_prendas: number;
+  tipo: string;
+  sub_tipo: string | null;
+  foto: string;
+  color: string;
+}
+
+export interface SavedOutfit {
+  id_outfit: number;
+  name: string;
+  style: string | null;
+  created_at: string;
+  garments: SavedOutfitGarment[];
+}
+
 async function getCollection<T>(endpoint: string): Promise<T[]> {
   const response = await fetch(endpoint);
 
@@ -56,3 +72,25 @@ export const getPrendas = () => getCollection<Prenda>('/api/prendas');
 export const getTipos = () => getCollection<Tipo>('/api/tipos');
 export const getSubTipos = () => getCollection<SubTipo>('/api/sub-tipos');
 export const getUsers = () => getCollection<User>('/api/users');
+
+const requestOutfits = async <T,>(endpoint: string, init?: RequestInit): Promise<T> => {
+  const response = await fetch(endpoint, { credentials: 'include', ...init });
+  const data: unknown = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = data && typeof data === 'object' && 'error' in data && typeof data.error === 'string'
+      ? data.error
+      : `La solicitud a ${endpoint} falló (HTTP ${response.status}).`;
+    throw new Error(message);
+  }
+  return data as T;
+};
+
+export const getSavedOutfits = () => requestOutfits<SavedOutfit[]>('/api/outfits/saved');
+export const createSavedOutfit = (payload: { name: string; style: string; garmentIds: number[] }) => requestOutfits<{ id_outfit: number }>('/api/outfits/saved', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload)
+});
+export const deleteSavedOutfit = (outfitId: number) => requestOutfits<{ message: string }>(`/api/outfits/saved/${outfitId}`, {
+  method: 'DELETE'
+});

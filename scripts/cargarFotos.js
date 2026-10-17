@@ -1,15 +1,14 @@
 import { ApifyClient } from 'apify-client';
 import { config } from 'dotenv';
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { renameSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 config();
 
 const ACTOR_ID = 'silentflow/pinterest-scraper-ppr';
-const RESULTS_PER_CATEGORY = 60;
-const RESULTS_REQUESTED_PER_ATTEMPT = 90;
-const MAX_ATTEMPTS_PER_CATEGORY = 2;
+const RESULTS_PER_GENDER = 30;
+const GENDERS = ['men', 'women'];
 const outputPath = resolve(dirname(fileURLToPath(import.meta.url)), '../src/data/outfits.json');
 const categories = {
   Boho: 'boho outfit fashion',
@@ -69,66 +68,48 @@ const getImageKey = url => {
   }
 };
 
-const readPreviousItems = () => {
-  if (!existsSync(outputPath)) return [];
-  try {
-    const previous = JSON.parse(readFileSync(outputPath, 'utf8'));
-    return Array.isArray(previous) ? previous.filter(item => isImageUrl(item?.url)) : [];
-  } catch {
-    return [];
-  }
-};
-
 const run = async () => {
   const token = process.env.APIFY_API_TOKEN;
   if (!token) throw new Error('Falta configurar APIFY_API_TOKEN en .env');
 
   const client = new ApifyClient({ token });
-  const previousItems = readPreviousItems();
   const collected = [];
   const usedImageKeys = new Set();
+  const incomplete = [];
 
   for (const [category, query] of Object.entries(categories)) {
-    const categoryItems = [];
-    try {
-      console.log(`Cargando ${category} (${RESULTS_PER_CATEGORY} resultados)...`);
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_CATEGORY && categoryItems.length < RESULTS_PER_CATEGORY; attempt += 1) {
-        const search = attempt === 1 ? query : `${query} ideas ${attempt}`;
+    for (const gender of GENDERS) {
+      const genderItems = [];
+      const search = `${query} ${gender}`;
+      try {
+        console.log(`Cargando ${category} ${gender} (${RESULTS_PER_GENDER} resultados): ${search}`);
         const { defaultDatasetId } = await client.actor(ACTOR_ID).call({
           search,
-          maxItems: RESULTS_REQUESTED_PER_ATTEMPT
+          maxItems: RESULTS_PER_GENDER
         });
-        const { items } = await client.dataset(defaultDatasetId).listItems({ limit: RESULTS_REQUESTED_PER_ATTEMPT * 3 });
-        for (const item of items) {
+        const { items } = await client.dataset(defaultDatasetId).listItems({ limit: RESULTS_PER_GENDER });
+        for (const item of items.slice(0, RESULTS_PER_GENDER)) {
           const url = findImageUrl(item);
           const imageKey = url && getImageKey(url);
           if (!url || !imageKey || usedImageKeys.has(imageKey)) continue;
           usedImageKeys.add(imageKey);
-          categoryItems.push({
-            id: `${category.toLowerCase().replace(/\s+/g, '-')}-${categoryItems.length + 1}`,
+          genderItems.push({
+            id: `${category.toLowerCase().replace(/\s+/g, '-')}-${gender}-${genderItems.length + 1}`,
             category,
+            gender,
             url,
             description: `${category} Outfit`
           });
-          if (categoryItems.length === RESULTS_PER_CATEGORY) break;
         }
-        if (categoryItems.length < RESULTS_PER_CATEGORY && attempt < MAX_ATTEMPTS_PER_CATEGORY) {
-          console.warn(`${category}: ${categoryItems.length}/${RESULTS_PER_CATEGORY} imágenes únicas; buscando reemplazos (intento ${attempt + 1}/${MAX_ATTEMPTS_PER_CATEGORY}).`);
-        }
+      } catch (error) {
+        console.error(`${category} ${gender}: fallo el scraping. ${error instanceof Error ? error.message : error}`);
       }
-      if (categoryItems.length < RESULTS_PER_CATEGORY) {
-        console.warn(`${category}: solo se encontraron ${categoryItems.length}/${RESULTS_PER_CATEGORY} imágenes válidas.`);
+
+      if (genderItems.length < RESULTS_PER_GENDER) {
+        incomplete.push(`${category} ${gender}: ${genderItems.length}/${RESULTS_PER_GENDER}`);
+        console.warn(`${category} ${gender}: solo se encontraron ${genderItems.length}/${RESULTS_PER_GENDER} imágenes válidas en los primeros ${RESULTS_PER_GENDER} resultados.`);
       }
-      collected.push(...categoryItems);
-    } catch (error) {
-      console.error(`${category}: fallo el scraping. ${error instanceof Error ? error.message : error}`);
-      for (const item of previousItems.filter(item => item.category === category)) {
-        const imageKey = getImageKey(item.url);
-        if (categoryItems.length >= RESULTS_PER_CATEGORY || usedImageKeys.has(imageKey)) continue;
-        usedImageKeys.add(imageKey);
-        categoryItems.push(item);
-      }
-      collected.push(...categoryItems);
+      collected.push(...genderItems);
     }
   }
 
@@ -141,6 +122,12 @@ const run = async () => {
   writeFileSync(temporaryPath, `${JSON.stringify(normalized, null, 2)}\n`, 'utf8');
   renameSync(temporaryPath, outputPath);
   console.log(`Listo: ${normalized.length} imágenes guardadas en ${outputPath}`);
+  if (incomplete.length) {
+    console.error(`Proceso incompleto (${incomplete.length} grupos): ${incomplete.join('; ')}`);
+    process.exitCode = 1;
+  } else {
+    console.log(`Verificación correcta: ${Object.keys(categories).length} categorías × 2 grupos × ${RESULTS_PER_GENDER} imágenes = ${normalized.length}.`);
+  }
 };
 
 run().catch(error => {

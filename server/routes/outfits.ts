@@ -214,6 +214,115 @@ const toPositiveIdSet = (value: unknown) => new Set(
     : []
 );
 
+router.get('/saved', requireAuth, async (req, res) => {
+  const userId = Number(req.session.userId);
+  try {
+    const outfits = await sql`
+      SELECT
+        outfit.id_outfit,
+        outfit.name,
+        outfit.style,
+        outfit.created_at,
+        COALESCE(
+          json_agg(json_build_object(
+            'id_prendas', garment.id_prendas,
+            'tipo', garment.tipo,
+            'sub_tipo', garment.sub_tipo,
+            'foto', garment.foto,
+            'color', garment.color
+          ) ORDER BY garment.id_prendas)
+            FILTER (WHERE garment.id_prendas IS NOT NULL),
+          '[]'::json
+        ) AS garments
+      FROM public.lookia_outfits outfit
+      LEFT JOIN public.lookia_outfit_prendas outfit_garment ON outfit_garment.id_outfit = outfit.id_outfit
+      LEFT JOIN public.prendas garment
+        ON garment.id_prendas = outfit_garment.id_prendas
+       AND garment.id_users = outfit.id_users
+      WHERE outfit.id_users = ${userId}
+      GROUP BY outfit.id_outfit
+      ORDER BY outfit.created_at DESC, outfit.id_outfit DESC;
+    `;
+    return res.json(outfits);
+  } catch (error) {
+    console.error('Could not load saved outfits.', { errorName: error instanceof Error ? error.name : 'UnknownError' });
+    return res.status(500).json({ error: 'No se pudieron cargar tus outfits guardados.' });
+  }
+});
+
+router.post('/saved', requireAuth, async (req, res) => {
+  const userId = Number(req.session.userId);
+  const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+  const style = typeof req.body?.style === 'string' ? req.body.style.trim() : '';
+  const rawGarmentIds: unknown = req.body?.garmentIds;
+
+  if (!name || name.length > 80) {
+    return res.status(400).json({ error: 'El nombre del outfit es obligatorio y no puede superar 80 caracteres.' });
+  }
+  if (style.length > 80) return res.status(400).json({ error: 'El estilo no puede superar 80 caracteres.' });
+  if (!Array.isArray(rawGarmentIds) || rawGarmentIds.length === 0) {
+    return res.status(400).json({ error: 'Seleccioná al menos una prenda de tu ropero.' });
+  }
+
+  const garmentIds = [...new Set(rawGarmentIds.filter((id): id is number => Number.isSafeInteger(id) && Number(id) > 0))];
+  if (garmentIds.length !== rawGarmentIds.length) {
+    return res.status(400).json({ error: 'La selección de prendas no es válida.' });
+  }
+
+  try {
+    const [saved] = await sql`
+      WITH requested AS MATERIALIZED (
+        SELECT value::bigint AS id_prendas
+        FROM jsonb_array_elements_text(${JSON.stringify(garmentIds)}::jsonb)
+      ),
+      owned AS MATERIALIZED (
+        SELECT garment.id_prendas
+        FROM public.prendas garment
+        INNER JOIN requested ON requested.id_prendas = garment.id_prendas
+        WHERE garment.id_users = ${userId}
+      ),
+      created AS (
+        INSERT INTO public.lookia_outfits (id_users, name, style)
+        SELECT ${userId}, ${name}, ${style || null}
+        WHERE (SELECT COUNT(*) FROM owned) = ${garmentIds.length}
+        RETURNING id_outfit
+      ),
+      linked AS (
+        INSERT INTO public.lookia_outfit_prendas (id_outfit, id_prendas)
+        SELECT created.id_outfit, owned.id_prendas
+        FROM created CROSS JOIN owned
+        RETURNING id_outfit
+      )
+      SELECT id_outfit FROM linked LIMIT 1;
+    `;
+
+    if (!saved) return res.status(400).json({ error: 'Una o más prendas ya no están disponibles en tu ropero.' });
+    return res.status(201).json({ id_outfit: Number(saved.id_outfit) });
+  } catch (error) {
+    console.error('Could not save outfit.', { errorName: error instanceof Error ? error.name : 'UnknownError' });
+    return res.status(500).json({ error: 'No se pudo guardar el outfit.' });
+  }
+});
+
+router.delete('/saved/:id', requireAuth, async (req, res) => {
+  const userId = Number(req.session.userId);
+  const outfitId = Number(req.params.id);
+  if (!Number.isSafeInteger(outfitId) || outfitId <= 0) return res.status(400).json({ error: 'Outfit inválido.' });
+
+  try {
+    const [deleted] = await sql`
+      DELETE FROM public.lookia_outfits
+      WHERE id_outfit = ${outfitId} AND id_users = ${userId}
+      RETURNING id_outfit;
+    `;
+    if (!deleted) return res.status(404).json({ error: 'Outfit no encontrado.' });
+    return res.json({ message: 'Outfit eliminado.' });
+  } catch (error) {
+    console.error('Could not delete outfit.', { errorName: error instanceof Error ? error.name : 'UnknownError' });
+    return res.status(500).json({ error: 'No se pudo eliminar el outfit.' });
+  }
+});
+
 router.post('/generate', requireAuth, async (req, res) => {
   const request = req.body?.request;
   if (typeof request !== 'string' || !request.trim()) {

@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import outfits from './data/outfits.json';
 import { auraItems } from './data/aura';
 import OutfitBuilder from './components/OutfitBuilder';
+import SearchableSelect, { type SelectOption } from './components/SearchableSelect';
+import SavedOutfits from './components/SavedOutfits';
 import {
   Menu,
   Compass,
@@ -110,6 +112,7 @@ const CATEGORIES = [...Object.keys(CATEGORY_SEARCHES), 'AURA'] as ExploreCategor
 type ExploreItem = {
   id: number | string;
   category: string;
+  gender?: 'men' | 'women';
   url: string;
   description: string;
 };
@@ -137,7 +140,7 @@ const shuffle = <T,>(items: T[]): T[] => {
 };
 
 const shuffledItemsByCategory = CATEGORIES.reduce<Record<ExploreCategory, ExploreItem[]>>((items, category) => {
-  const categoryItems = category === 'AURA'
+  const categoryItems: ExploreItem[] = category === 'AURA'
     ? auraItems
     : localItems.filter(item => item.category === category && item.url.startsWith('http'));
   items[category] = shuffle(categoryItems);
@@ -179,6 +182,7 @@ export default function App() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoMessage, setPhotoMessage] = useState<string | null>(null);
   const [wardrobeTypes, setWardrobeTypes] = useState<WardrobeType[]>([]);
@@ -285,7 +289,7 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    if (currentUser && activeNav === 'mi-ropa') void loadWardrobe();
+    if (currentUser && (activeNav === 'mi-ropa' || activeNav === 'mis-outfits')) void loadWardrobe();
   }, [activeNav, currentUser, loadWardrobe]);
 
   const selectedType = wardrobeTypes.find(type => normalizeWardrobeCategory(type.tipo) === selectedWardrobeCategory);
@@ -301,6 +305,11 @@ export default function App() {
     const type = wardrobeTypes.find(item => item.id_tipo === subtype.id_tipo);
     return type ? normalizeWardrobeCategory(type.tipo) === selectedWardrobeCategory : false;
   });
+  const subtypeOptions = (subtypes: WardrobeSubtype[]): SelectOption[] => subtypes.map(subtype => ({
+    id: subtype.id_subtipo,
+    value: subtype.sub_tipo,
+    label: subtype.sub_tipo
+  }));
   const visibleGarments = garments.filter(garment => {
     const categoryMatches = normalizeWardrobeCategory(garment.tipo) === selectedWardrobeCategory;
     return categoryMatches && (!selectedWardrobeSubtype || garment.sub_tipo === selectedWardrobeSubtype);
@@ -703,6 +712,7 @@ export default function App() {
 
       setCurrentUser(data.user ?? currentUser);
       setProfileSuccess('Perfil actualizado correctamente.');
+      setProfileEditOpen(false);
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : 'No se pudo guardar tu perfil.');
     } finally {
@@ -962,7 +972,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className={`${activeNav === 'camera' ? 'pt-0 pb-0 px-0 w-screen' : 'pt-0 pb-20 sm:pb-28 px-4 sm:px-5 lg:px-6 max-w-[1280px]'} mx-auto editorial-gradient`}>
+        <main className={`app-main ${activeNav === 'camera' ? 'pt-0 pb-0 px-0 w-screen' : 'pt-0 pb-20 sm:pb-28 px-4 sm:px-5 lg:px-6 max-w-[1280px]'} ${activeNav === 'compass' ? 'app-main--explore' : ''} mx-auto editorial-gradient`}>
           {activeNav === 'crear-outfit' ? (
             authState === 'loading' ? (
               <section className="outfit-builder"><div className="panel rounded-3xl p-8 text-center">Verificando sesión…</div></section>
@@ -1016,10 +1026,7 @@ export default function App() {
                           </select>
                         </label>
                         <label className="wardrobe-field">Subtipo
-                          <select required value={garmentForm.sub_tipo} onChange={event => setGarmentForm({ ...garmentForm, sub_tipo: event.target.value })} disabled={!garmentForm.tipo}>
-                            <option value="">Elegí un subtipo</option>
-                            {formSubtypes.map(subtype => <option key={subtype.id_subtipo} value={subtype.sub_tipo}>{subtype.sub_tipo}</option>)}
-                          </select>
+                          <SearchableSelect id="new-garment-subtype" value={garmentForm.sub_tipo} options={subtypeOptions(formSubtypes)} onChange={sub_tipo => setGarmentForm({ ...garmentForm, sub_tipo })} placeholder="Elegí un subtipo" ariaLabel="Subtipo de la prenda" required disabled={!garmentForm.tipo} />
                         </label>
                         <label className="wardrobe-field">Color
                           <input required maxLength={40} value={garmentForm.color} onChange={event => setGarmentForm({ ...garmentForm, color: event.target.value })} placeholder="Ej. Negro" />
@@ -1068,10 +1075,7 @@ export default function App() {
               </div>
               <div className="wardrobe-filter-row">
                 <label htmlFor="wardrobe-subtype">Filtrar por subtipo</label>
-                <select id="wardrobe-subtype" value={selectedWardrobeSubtype} onChange={event => setSelectedWardrobeSubtype(event.target.value)}>
-                  <option value="">Todos</option>
-                  {wardrobeSubtypesForCategory.map(subtype => <option key={subtype.id_subtipo} value={subtype.sub_tipo}>{subtype.sub_tipo}</option>)}
-                </select>
+                <SearchableSelect id="wardrobe-subtype" value={selectedWardrobeSubtype} options={subtypeOptions(wardrobeSubtypesForCategory)} onChange={setSelectedWardrobeSubtype} placeholder="Todos" searchPlaceholder="Buscar subtipo…" ariaLabel="Filtrar prendas por subtipo" />
               </div>
               {wardrobeError && <p className="wardrobe-message wardrobe-message--error" role="alert">{wardrobeError}</p>}
               {wardrobeLoading ? <div className="wardrobe-empty panel rounded-3xl">Cargando tu ropero…</div> : visibleGarments.length === 0 ? (
@@ -1086,7 +1090,7 @@ export default function App() {
                   <img src={garment.foto} alt={`${garment.sub_tipo || garment.tipo}, color ${garment.color}`} className="garment-photo" />
                   {editingGarmentId === garment.id_prendas ? <div className="garment-edit-form">
                     <label className="wardrobe-field">Tipo<select value={editingGarmentForm.tipo} onChange={event => setEditingGarmentForm({ tipo: event.target.value, sub_tipo: '', color: editingGarmentForm.color })}>{wardrobeTypes.map(type => <option key={type.id_tipo} value={type.tipo}>{type.tipo}</option>)}</select></label>
-                    <label className="wardrobe-field">Subtipo<select value={editingGarmentForm.sub_tipo} onChange={event => setEditingGarmentForm({ ...editingGarmentForm, sub_tipo: event.target.value })}>{editingSubtypes.map(subtype => <option key={subtype.id_subtipo} value={subtype.sub_tipo}>{subtype.sub_tipo}</option>)}</select></label>
+                    <label className="wardrobe-field">Subtipo<SearchableSelect id={`edit-garment-subtype-${garment.id_prendas}`} value={editingGarmentForm.sub_tipo} options={subtypeOptions(editingSubtypes)} onChange={sub_tipo => setEditingGarmentForm({ ...editingGarmentForm, sub_tipo })} placeholder="Elegí un subtipo" ariaLabel={`Subtipo de ${garment.sub_tipo || garment.tipo}`} required /></label>
                     <label className="wardrobe-field">Color<input value={editingGarmentForm.color} maxLength={40} onChange={event => setEditingGarmentForm({ ...editingGarmentForm, color: event.target.value })} /></label>
                     <div className="garment-actions"><button type="button" className="btn-accent rounded-full px-4 py-2" onClick={() => void saveGarmentEdit(garment.id_prendas)}>Guardar</button><button type="button" className="btn-outline rounded-full px-4 py-2" onClick={() => setEditingGarmentId(null)}>Cancelar</button></div>
                   </div> : <div className="garment-card-content">
@@ -1097,15 +1101,7 @@ export default function App() {
               </div>}
             </section>
           ) : activeNav === 'mis-outfits' ? (
-            <section className="space-y-6">
-              <div className="panel rounded-3xl p-6">
-                <h2 className="font-headline text-4xl text-secondary mb-3">Mis outfits</h2>
-                <p className="font-body text-muted text-sm mb-6">Combina tus prendas y guarda tus looks favoritos.</p>
-                <div className="dashed-panel rounded-3xl p-8 flex items-center justify-center">
-                  <p className="text-secondary text-center">No hay outfits guardados aún.</p>
-                </div>
-              </div>
-            </section>
+            !currentUser ? renderGuestAccessPanel() : <SavedOutfits garments={garments} wardrobeLoading={wardrobeLoading} wardrobeError={wardrobeError} onOpenWardrobe={() => setActiveNav('mi-ropa')} onRetryWardrobe={() => { void loadWardrobe(); }} />
           ) : activeNav === 'auth-access' ? (
             renderGuestAccessPanel()
           ) : activeNav === 'auth-login' ? (
@@ -1179,108 +1175,56 @@ export default function App() {
               </div>
             </section>
           ) : activeNav === 'user' ? (
-            <section className="space-y-6">
+            <section className="profile-page">
               {authState === 'loading' ? (
-                <div className="panel rounded-3xl p-8 text-center">Verificando sesión…</div>
+                <div className="profile-loading panel" role="status">Verificando sesión…</div>
               ) : !currentUser ? (
                 renderGuestAccessPanel()
               ) : (
-                <div className="rounded-3xl bg-surface-container p-6 shadow-2xl max-w-3xl mx-auto">
-                  <h2 className="font-headline text-4xl text-secondary mb-3 text-center">Perfil</h2>
-                  <p className="font-body text-primary text-sm opacity-80 mb-6 text-center">
-                    Accede a tu información, ajustes y preferencias de estilo.
-                  </p>
+                <div className="profile-layout">
+                  <header className="profile-heading">
+                    <div><span className="section-label">LOOKIA · TU ESPACIO</span><h2 className="font-headline">Perfil</h2></div>
+                    {!profileEditOpen && <button type="button" className="btn-accent profile-edit-toggle" onClick={() => { setProfileForm({ nombre: currentUser.nombre ?? '', apellido: currentUser.apellido ?? '', username: currentUser.username ?? '', email: currentUser.email ?? '', fecha_nacimiento: currentUser.fecha_nacimiento ?? '', pais: currentUser.pais ?? '' }); setProfileError(null); setProfileSuccess(null); setProfileEditOpen(true); }}><Pencil size={16} aria-hidden="true" /> Editar perfil</button>}
+                  </header>
 
-                  <div className="flex flex-col items-center gap-4 px-4 sm:px-0">
-                    <div className="relative">
-                      <button type="button" onClick={() => profileFileInputRef.current?.click()} className="group relative w-48 h-48 sm:w-64 sm:h-64 rounded-full overflow-hidden bg-surface-container border-2 border-white/6 flex items-center justify-center transition-all duration-300 hover:shadow-lg focus:outline-none avatar-gradient">
-                        <span className="sr-only">Editar foto de perfil</span>
-                        {currentUser.photo ? (
-                          <img src={getProfilePhotoUrl(currentUser.photo) ?? undefined} alt="Foto de perfil" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full rounded-full bg-gradient-to-br from-background/30 to-surface-container" />
-                        )}
-                        <Edit3 className="absolute right-3 bottom-3 w-7 h-7 text-secondary bg-background/60 p-1 rounded-full opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
-                      </button>
+                  <section className="profile-summary panel" aria-label="Resumen del perfil">
+                    <div className="profile-identity">
+                      <div className="profile-avatar avatar-gradient">
+                        {currentUser.photo ? <img src={getProfilePhotoUrl(currentUser.photo) ?? undefined} alt="Foto de perfil" /> : <span aria-hidden="true">{(currentUser.nombre?.[0] || currentUser.username?.[0] || 'L').toLocaleUpperCase('es')}</span>}
+                        {profileEditOpen && <button type="button" className="profile-avatar-edit" aria-label="Editar foto de perfil" onClick={() => profileFileInputRef.current?.click()}><Edit3 size={15} /></button>}
+                      </div>
                       <input ref={profileFileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleProfilePhotoChange} />
-                    </div>
-
-                    <div className="w-full flex justify-center">
-                      <button type="button" onClick={() => profileFileInputRef.current?.click()} className="mt-2 px-5 py-2 rounded-2xl btn-outline">Editar foto</button>
-                    </div>
-
-                    {photoMessage && <p className="text-sm text-accent-light">{photoMessage}</p>}
-                    {isUploadingPhoto && <p className="text-sm text-secondary/80">Subiendo foto…</p>}
-
-                    <div className="w-full mt-2 px-0">
-                      <div className="rounded-2xl bg-background/70 p-4 panel-alt">
-                        <p className="text-xs uppercase tracking-[0.35em] text-secondary/70 mb-3">Info</p>
-                        <div className="grid gap-3">
-                          <div className="flex justify-between items-center p-3 rounded-2xl bg-surface-container min-w-0">
-                            <span className="text-secondary/70 text-sm mr-3 truncate">Nombre de usuario</span>
-                            <span className="text-primary font-semibold truncate text-right min-w-0">{currentUser.username || 'Sin usuario'}</span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 rounded-2xl bg-surface-container min-w-0">
-                            <span className="text-secondary/70 text-sm mr-3 truncate">Nombre real</span>
-                            <span className="text-primary font-semibold truncate text-right min-w-0">{[currentUser.nombre, currentUser.apellido].filter(Boolean).join(' ') || 'Sin nombre'}</span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 rounded-2xl bg-surface-container min-w-0">
-                            <span className="text-secondary/70 text-sm mr-3 truncate">Correo</span>
-                            <span className="text-primary font-semibold truncate text-right min-w-0">{currentUser.email || 'Sin email'}</span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 rounded-2xl bg-surface-container min-w-0">
-                            <span className="text-secondary/70 text-sm mr-3 truncate">País</span>
-                            <span className="text-primary font-semibold truncate text-right min-w-0">{currentUser.pais || 'Sin país'}</span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 rounded-2xl bg-surface-container min-w-0">
-                            <span className="text-secondary/70 text-sm mr-3 truncate">Nacimiento</span>
-                            <span className="text-primary font-semibold truncate text-right min-w-0">{currentUser.fecha_nacimiento || 'Sin fecha'}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-6 rounded-2xl bg-background/70 p-4 panel-alt">
-                        <p className="text-xs uppercase tracking-[0.35em] text-secondary/70 mb-3">Editar perfil</p>
-                        <form onSubmit={handleProfileSave} className="space-y-4">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm mb-2 text-secondary/80">Nombre</label>
-                              <input type="text" value={profileForm.nombre} onChange={(event) => setProfileForm({ ...profileForm, nombre: event.target.value })} className="w-full rounded-2xl bg-background/70 border border-white/10 px-4 py-3 text-primary outline-none focus:border-primary/70" />
-                            </div>
-                            <div>
-                              <label className="block text-sm mb-2 text-secondary/80">Apellido</label>
-                              <input type="text" value={profileForm.apellido} onChange={(event) => setProfileForm({ ...profileForm, apellido: event.target.value })} className="w-full rounded-2xl bg-background/70 border border-white/10 px-4 py-3 text-primary outline-none focus:border-primary/70" />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm mb-2 text-secondary/80">Username</label>
-                              <input type="text" value={profileForm.username} onChange={(event) => setProfileForm({ ...profileForm, username: event.target.value })} className="w-full rounded-2xl bg-background/70 border border-white/10 px-4 py-3 text-primary outline-none focus:border-primary/70" />
-                            </div>
-                            <div>
-                              <label className="block text-sm mb-2 text-secondary/80">Email</label>
-                              <input type="email" value={profileForm.email} onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })} className="w-full rounded-2xl bg-background/70 border border-white/10 px-4 py-3 text-primary outline-none focus:border-primary/70" />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm mb-2 text-secondary/80">Fecha de nacimiento</label>
-                              <input type="date" value={profileForm.fecha_nacimiento} onChange={(event) => setProfileForm({ ...profileForm, fecha_nacimiento: event.target.value })} className="w-full rounded-2xl bg-background/70 border border-white/10 px-4 py-3 text-primary outline-none focus:border-primary/70" />
-                            </div>
-                            <div>
-                              <label className="block text-sm mb-2 text-secondary/80">País</label>
-                              <input type="text" value={profileForm.pais} onChange={(event) => setProfileForm({ ...profileForm, pais: event.target.value })} className="w-full rounded-2xl bg-background/70 border border-white/10 px-4 py-3 text-primary outline-none focus:border-primary/70" />
-                            </div>
-                          </div>
-                          {profileError && <p className="text-sm text-accent-light">{profileError}</p>}
-                          {profileSuccess && <p className="text-sm text-accent-light">{profileSuccess}</p>}
-                          <div className="flex justify-center mt-4">
-                            <button type="submit" disabled={isProfileSaving} className="px-6 py-2 rounded-2xl btn-accent font-semibold disabled:opacity-60">{isProfileSaving ? 'Guardando...' : 'Guardar cambios'}</button>
-                          </div>
-                        </form>
+                      <div className="profile-identity-copy">
+                        <h3 className="font-headline">{[currentUser.nombre, currentUser.apellido].filter(Boolean).join(' ') || currentUser.username || 'Tu perfil'}</h3>
+                        <p>@{currentUser.username || 'Sin usuario'}</p>
                       </div>
                     </div>
-                  </div>
+
+                    {!profileEditOpen ? <div className="profile-details" aria-label="Datos personales">
+                      <div className="profile-detail"><span>Nombre de usuario</span><strong>{currentUser.username || 'Sin usuario'}</strong></div>
+                      <div className="profile-detail"><span>Nombre real</span><strong>{[currentUser.nombre, currentUser.apellido].filter(Boolean).join(' ') || 'Sin nombre'}</strong></div>
+                      <div className="profile-detail"><span>Correo</span><strong>{currentUser.email || 'Sin email'}</strong></div>
+                      <div className="profile-detail"><span>País</span><strong>{currentUser.pais || 'Sin país'}</strong></div>
+                      <div className="profile-detail"><span>Fecha de nacimiento</span><strong>{currentUser.fecha_nacimiento || 'Sin fecha'}</strong></div>
+                    </div> : <form onSubmit={handleProfileSave} className="profile-edit-form" aria-label="Editar datos del perfil">
+                      <div className="profile-edit-fields">
+                        <label className="profile-field">Nombre<input type="text" value={profileForm.nombre} onChange={event => setProfileForm({ ...profileForm, nombre: event.target.value })} /></label>
+                        <label className="profile-field">Apellido<input type="text" value={profileForm.apellido} onChange={event => setProfileForm({ ...profileForm, apellido: event.target.value })} /></label>
+                        <label className="profile-field">Nombre de usuario<input type="text" value={profileForm.username} onChange={event => setProfileForm({ ...profileForm, username: event.target.value })} /></label>
+                        <label className="profile-field">Correo electrónico<input type="email" value={profileForm.email} onChange={event => setProfileForm({ ...profileForm, email: event.target.value })} /></label>
+                        <label className="profile-field">Fecha de nacimiento<input type="date" value={profileForm.fecha_nacimiento} onChange={event => setProfileForm({ ...profileForm, fecha_nacimiento: event.target.value })} /></label>
+                        <label className="profile-field">País<input type="text" value={profileForm.pais} onChange={event => setProfileForm({ ...profileForm, pais: event.target.value })} /></label>
+                      </div>
+                      {profileError && <p className="profile-feedback profile-feedback--error" role="alert">{profileError}</p>}
+                      <div className="profile-edit-actions">
+                        <button type="button" className="btn-outline" disabled={isProfileSaving} onClick={() => { setProfileForm({ nombre: currentUser.nombre ?? '', apellido: currentUser.apellido ?? '', username: currentUser.username ?? '', email: currentUser.email ?? '', fecha_nacimiento: currentUser.fecha_nacimiento ?? '', pais: currentUser.pais ?? '' }); setProfileError(null); setProfileEditOpen(false); }}>Cancelar</button>
+                        <button type="submit" className="btn-accent" disabled={isProfileSaving}>{isProfileSaving ? 'Guardando…' : 'Guardar cambios'}</button>
+                      </div>
+                    </form>}
+                    {profileSuccess && <p className="profile-feedback profile-feedback--success" role="status">{profileSuccess}</p>}
+                    {isUploadingPhoto && <p className="profile-feedback" role="status">Subiendo foto…</p>}
+                    {photoMessage && <p className="profile-feedback" role={isUploadingPhoto ? 'status' : 'alert'}>{photoMessage}</p>}
+                  </section>
                 </div>
               )}
             </section>

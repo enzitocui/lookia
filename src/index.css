@@ -1381,6 +1381,16 @@ input, textarea, select, button {
 
 .outfit-result { margin: clamp(2.5rem, 6vw, 4rem) 0 1rem; }
 .outfit-result > h3 { margin-bottom: 1rem; color: var(--text); font-size: 1.6rem; }
+.outfit-result-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem; margin-top: 1rem; }
+.outfit-result-actions .outfit-feedback-error { flex-basis: 100%; margin: 0; }
+.outfit-result-actions .outfit-request-notice { margin: 0; }
+.outfit-save-backdrop { position: fixed; inset: 0; z-index: 110; display: grid; place-items: center; padding: 1rem; background: rgba(8, 7, 18, 0.68); backdrop-filter: blur(6px); }
+.outfit-save-dialog { width: min(100%, 30rem); padding: clamp(1.1rem, 4vw, 1.75rem); border: 1px solid var(--border-hover); border-radius: 1.5rem; box-shadow: var(--shadow-lg); }
+.outfit-save-dialog h4 { margin-top: 0.4rem; color: var(--text); font-size: clamp(1.35rem, 4vw, 1.8rem); }
+.outfit-save-dialog > p { margin: 0.55rem 0 1.1rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.55; }
+.outfit-save-actions { display: flex; justify-content: flex-end; gap: 0.65rem; margin-top: 1.1rem; }
+.outfit-save-actions button { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; gap: 0.45rem; }
+.outfit-save-dialog input:focus-visible, .outfit-result-actions button:focus-visible { outline: 2px solid var(--primary-light); outline-offset: 2px; }
 
 .outfit-preview-backdrop {
   position: fixed;
@@ -1446,10 +1456,15 @@ input, textarea, select, button {
 
 .outfit-result-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-areas: "garments complementary evaluation";
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr);
   align-items: start;
   gap: 1rem;
 }
+
+.outfit-result-garments { grid-area: garments; }
+.outfit-result-complementary { grid-area: complementary; }
+.outfit-result-grid > .outfit-explanation { grid-area: evaluation; }
 
 .outfit-result-column {
   min-width: 0;
@@ -1459,7 +1474,6 @@ input, textarea, select, button {
 }
 
 .outfit-preview-modal .outfit-result-grid {
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr) minmax(0, 1.15fr);
   gap: clamp(0.65rem, 1.2vw, 1rem);
 }
 
@@ -1530,6 +1544,7 @@ input, textarea, select, button {
 .outfit-reference-card:first-child img { min-height: 18.7rem; }
 
 .outfit-explanation > p, .outfit-explanation li, .outfit-copy-section p { color: var(--text-secondary); font-size: 0.88rem; line-height: 1.65; }
+.outfit-evaluation-copy p { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
 .outfit-explanation h5 { margin: 1rem 0 0.35rem; color: var(--text); font-family: var(--font-headline); font-size: 0.9rem; font-weight: 700; }
 .outfit-explanation ul { display: grid; gap: 0.35rem; padding-left: 1.1rem; list-style: disc; }
 
@@ -1546,9 +1561,19 @@ input, textarea, select, button {
 .outfit-evaluation-section { margin-top: 0.8rem; border-color: var(--border-active); }
 .outfit-future-details { margin-top: 0.25rem; }
 
-@media (max-width: 900px) {
-  .outfit-result-grid, .outfit-preview-modal .outfit-result-grid { grid-template-columns: minmax(0, 1fr); }
-  .outfit-explanation { grid-column: auto; }
+@media (max-width: 1024px) {
+  .outfit-result-grid, .outfit-preview-modal .outfit-result-grid {
+    grid-template-areas: "garments evaluation" "complementary evaluation";
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .outfit-result-grid, .outfit-preview-modal .outfit-result-grid {
+    grid-template-areas: "garments" "evaluation" "complementary";
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .outfit-result-grid > .outfit-explanation { grid-column: auto; }
 }
 
 @media (max-width: 640px) {
@@ -1557,8 +1582,6 @@ input, textarea, select, button {
   .outfit-builder-heading p { margin-left: 0; }
   .outfit-request-footer { align-items: stretch; flex-direction: column; }
   .outfit-request-footer .btn-accent { width: 100%; }
-  .outfit-result-grid, .outfit-preview-modal .outfit-result-grid { grid-template-columns: minmax(0, 1fr); }
-  .outfit-explanation { grid-column: auto; }
   .outfit-garment-list, .outfit-reference-list { max-height: 25rem; }
   .outfit-preview-backdrop { align-items: flex-end; padding: 0; }
   .outfit-preview-modal { width: 100%; max-height: 94dvh; padding: 1rem; border-radius: 1.4rem 1.4rem 0 0; }
@@ -1612,18 +1635,40 @@ input, textarea, select, button {
 .saved-outfits-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); align-items: start; gap: 1rem; padding-bottom: 2rem; }
 .saved-outfit-card { min-width: 0; padding: 1rem; border: 1px solid var(--border); border-radius: 1.25rem; box-shadow: var(--shadow-sm); }
 .saved-outfit-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.65rem; }
-.saved-outfit-card-header h3 { overflow-wrap: anywhere; color: var(--text); font-size: 1.2rem; font-weight: 700; line-height: 1.25; }
+.saved-outfit-card-header h3 { min-width: 0; overflow-wrap: anywhere; color: var(--text); font-size: 1.2rem; font-weight: 700; line-height: 1.25; }
+.saved-outfit-open-title { display: inline-flex; align-items: center; gap: 0.15rem; max-width: 100%; color: inherit; text-align: left; }
+.saved-outfit-open-title svg { flex: 0 0 auto; color: var(--accent); }
+.saved-outfit-open-title:focus-visible, .saved-outfit-open-preview:focus-visible { outline: 2px solid var(--primary-light); outline-offset: 3px; border-radius: 0.5rem; }
 .saved-outfit-card-header .icon-button { flex: 0 0 auto; color: var(--text-secondary); border-radius: 50%; }
 .saved-outfit-card-header .icon-button:hover { color: #fb7185; background: var(--surface-hover); }
 .saved-outfit-style { display: inline-flex; max-width: 100%; margin-top: 0.45rem; padding: 0.25rem 0.6rem; overflow-wrap: anywhere; color: var(--accent-light); background: rgba(var(--accent-rgb), 0.12); border: 1px solid var(--border); border-radius: 999px; font-size: 0.74rem; font-weight: 700; }
-.saved-outfit-date { margin: 0.55rem 0 0.85rem; color: var(--text-muted); font-size: 0.76rem; }
+.saved-outfit-open-preview { display: grid; width: 100%; margin-top: 0.25rem; padding: 0; color: inherit; text-align: left; }
+.saved-outfit-date { display: block; margin: 0.3rem 0 0.65rem; color: var(--text-muted); font-size: 0.76rem; }
 .saved-outfit-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.45rem; }
 .saved-outfit-item { display: flex; align-items: center; min-width: 0; gap: 0.55rem; padding: 0.4rem; background: var(--background-alt); border: 1px solid var(--border); border-radius: 0.8rem; }
 .saved-outfit-item img { flex: 0 0 auto; width: 2.65rem; height: 2.8rem; object-fit: cover; border-radius: 0.55rem; }
 .saved-outfit-item strong { font-size: 0.75rem; }
 .saved-outfit-item small { font-size: 0.65rem; }
+.saved-outfit-image-placeholder { display: grid; flex: 0 0 auto; width: 2.65rem; height: 2.8rem; place-items: center; color: var(--accent); background: var(--surface); border-radius: 0.55rem; }
 .saved-outfit-no-items { grid-column: 1 / -1; padding: 0.85rem; color: var(--text-muted); background: var(--background-alt); border-radius: 0.75rem; font-size: 0.82rem; line-height: 1.5; }
-.saved-outfit-card-footer { margin-top: 0.8rem; padding-top: 0.65rem; color: var(--text-muted); border-top: 1px solid var(--border); font-size: 0.72rem; }
+.saved-outfit-evaluation-preview { display: -webkit-box; margin-top: 0.65rem; overflow: hidden; color: var(--text-secondary); font-size: 0.78rem; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.saved-outfit-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.7rem; padding-top: 0.6rem; color: var(--text-muted); border-top: 1px solid var(--border); font-size: 0.72rem; }
+.saved-outfit-card-footer > span { display: inline-flex; align-items: center; color: var(--accent-light); font-weight: 700; }
+.saved-outfit-detail-page { padding-bottom: 2rem; }
+.saved-outfit-back { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; min-height: 2.75rem; margin-bottom: 1rem; }
+.saved-outfit-detail-heading { margin-bottom: 1.5rem; }
+.saved-outfit-detail-heading h2 { margin-top: 0.3rem; color: var(--text); font-size: clamp(1.8rem, 4.5vw, 3rem); line-height: 1.15; overflow-wrap: anywhere; }
+.saved-outfit-detail-heading p { margin-top: 0.5rem; color: var(--text-secondary); }
+.saved-outfit-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 1rem; }
+.saved-outfit-detail-grid > .outfit-result-column { min-height: 100%; }
+.saved-outfit-detail-grid > .outfit-result-column > h3 { display: flex; align-items: center; gap: 0.55rem; margin: 0 0 1rem; color: var(--text); font-family: var(--font-headline); font-size: 1.15rem; }
+.saved-outfit-detail-grid > .outfit-result-column > h3 svg { flex: 0 0 auto; color: var(--accent); }
+.saved-outfit-detail-grid .outfit-garment-list { max-height: none; }
+.saved-outfit-detail-grid .outfit-garment-card { grid-template-columns: 5rem minmax(0, 1fr); }
+.saved-outfit-detail-grid .outfit-garment-card img, .saved-outfit-detail-grid .outfit-garment-image-placeholder { width: 5rem; }
+.saved-outfit-detail-grid .outfit-garment-card h4 { color: var(--text); font-family: var(--font-headline); font-size: 1rem; overflow-wrap: anywhere; }
+.saved-outfit-detail-evaluation, .saved-outfit-detail-no-evaluation { color: var(--text-secondary); font-size: 1rem; line-height: 1.8; white-space: pre-line; overflow-wrap: anywhere; }
+.saved-outfit-detail-no-evaluation { color: var(--text-muted); }
 
 @media (max-width: 640px) {
   .wardrobe-page { padding-top: 5.5rem; }
@@ -1846,12 +1891,19 @@ input, textarea, select, button {
   .saved-outfit-card-header h3 { font-size: 0.94rem; }
   .saved-outfit-card-header .icon-button { min-width: 2.25rem; min-height: 2.25rem; }
   .saved-outfit-date { font-size: 0.67rem; }
-  .saved-outfit-items { grid-template-columns: minmax(0, 1fr); gap: 0.35rem; }
-  .saved-outfit-item { gap: 0.4rem; padding: 0.3rem; }
-  .saved-outfit-item img { width: 2.2rem; height: 2.3rem; }
-  .saved-outfit-item strong { font-size: 0.68rem; }
-  .saved-outfit-item small { font-size: 0.58rem; }
+  .saved-outfit-items { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35rem; }
+  .saved-outfit-item { position: relative; display: block; aspect-ratio: 1; overflow: hidden; padding: 0; }
+  .saved-outfit-item img, .saved-outfit-image-placeholder { width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
+  .saved-outfit-item > span:not(.saved-outfit-image-placeholder) { position: absolute; right: 0; bottom: 0; left: 0; display: grid; gap: 0.1rem; padding: 0.25rem; background: rgba(12, 10, 22, 0.76); }
+  .saved-outfit-item strong { color: white; font-size: 0.66rem; }
+  .saved-outfit-item small { display: none; }
   .saved-outfit-card-footer { margin-top: 0.55rem; padding-top: 0.45rem; }
+  .saved-outfit-detail-grid { grid-template-columns: minmax(0, 1fr); }
+  .saved-outfit-detail-grid > .outfit-result-column { min-height: 0; }
+  .saved-outfit-detail-grid .outfit-garment-card { grid-template-columns: 4rem minmax(0, 1fr); }
+  .saved-outfit-detail-grid .outfit-garment-card img, .saved-outfit-detail-grid .outfit-garment-image-placeholder { width: 4rem; }
+  .outfit-save-actions { flex-direction: column-reverse; }
+  .outfit-save-actions button { width: 100%; min-height: 2.9rem; }
 
   .profile-page { padding-top: 4.45rem; }
   .profile-heading { align-items: center; margin-bottom: 0.8rem; }
@@ -1925,6 +1977,12 @@ input, textarea, select, button {
   .explore-grid { column-width: clamp(7.75rem, 39vw, 8.5rem); column-gap: 0.45rem; }
   .profile-edit-fields { grid-template-columns: minmax(0, 1fr); }
   .profile-detail { min-height: 2.9rem; }
+  .wardrobe-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem; }
+  .garment-card-content { padding: 0.4rem; }
+  .garment-actions .icon-button { min-width: 2.4rem; min-height: 2.4rem; }
+}
+
+@media (max-width: 339px) {
   .saved-outfits-grid { grid-template-columns: minmax(0, 1fr); }
 }
 

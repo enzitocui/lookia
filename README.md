@@ -2,24 +2,28 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# Lookia
 
-This contains everything you need to run your app locally.
+Aplicación web de Lookia con React y servidor Express/PostgreSQL.
 
-View your app in AI Studio: https://ai.studio/apps/21c7125a-ba26-497c-9c84-f36409a48c87
-
-## Run Locally
+## Ejecución local
 
 **Prerequisites:**  Node.js
 
-
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key if you use the AI tools.
-3. Refresh outfit images when needed:
-   `npm run cargar:fotos`
-4. Run the app:
+2. Configurá `DATABASE_URL` y `NVIDIA_NIM_API_KEY` en `.env` en el servidor. `.env` está excluido de Git; `.env.example` contiene solo valores de referencia.
+3. Iniciá el backend y el frontend en terminales separadas:
+   `npm run server`
    `npm run dev`
+4. Ejecutá las pruebas unitarias del cliente NIM y las validaciones:
+   `npm test`
+5. Refresh outfit images when needed:
+   `npm run cargar:fotos`
+
+La clave de NVIDIA solo se lee desde `process.env.NVIDIA_NIM_API_KEY` en el backend. No la configures con prefijos `VITE_` ni la incluyas en el código del cliente. El generador usa `https://integrate.api.nvidia.com/v1/chat/completions`, modelo `meta/llama-3.2-11b-vision-instruct`, sin streaming y sin enviar imágenes.
+
+Después de configurar la clave, reiniciá el proceso de Express para que tome el nuevo entorno. La ruta autenticada `POST /api/outfits/generate` informa con un error claro si falta la clave; `GET /api/health` solo verifica la base de datos. Las pruebas automatizadas usan respuestas simuladas y no consumen cuota de NVIDIA.
 
 ## Imágenes del ropero
 
@@ -27,6 +31,6 @@ Las imágenes se guardan en el disco del servidor, dentro de `uploads/prendas/{i
 
 ## Outfits guardados
 
-`Mis outfits` guarda combinaciones de prendas existentes por usuario. Para habilitar la persistencia, configurá `DATABASE_URL` y ejecutá `npm run migrate:outfits` una vez por base de datos. La migración es aditiva e idempotente; no altera las tablas actuales de usuarios ni prendas.
+`Mis outfits` guarda combinaciones de hasta cuatro prendas existentes por usuario y, para outfits generados, conserva la evaluación original de NVIDIA NIM. Para habilitar la persistencia, configurá `DATABASE_URL` y ejecutá `npm run migrate:outfits` una vez por base de datos. Las migraciones son aditivas e idempotentes; la segunda agrega una columna de evaluación nullable sin modificar ni eliminar los outfits existentes.
 
 The image loader uses Apify only from `scripts/cargarFotos.js`. React reads the generated `src/data/outfits.json` locally and never calls Apify from the browser.

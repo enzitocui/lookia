@@ -45,8 +45,24 @@ export interface SavedOutfit {
   id_outfit: number;
   name: string;
   style: string | null;
+  evaluation: string | null;
   created_at: string;
   garments: SavedOutfitGarment[];
+}
+
+export interface OutfitGarmentCard {
+  id: number;
+  name: string;
+  category: string;
+  color?: string;
+  imageUrl: string;
+}
+
+export interface GeneratedOutfit {
+  garments: OutfitGarmentCard[];
+  complementaryItems: OutfitGarmentCard[];
+  evaluation: string | null;
+  wardrobeMessage?: string;
 }
 
 async function getCollection<T>(endpoint: string): Promise<T[]> {
@@ -86,7 +102,17 @@ const requestOutfits = async <T,>(endpoint: string, init?: RequestInit): Promise
 };
 
 export const getSavedOutfits = () => requestOutfits<SavedOutfit[]>('/api/outfits/saved');
-export const createSavedOutfit = (payload: { name: string; style: string; garmentIds: number[] }) => requestOutfits<{ id_outfit: number }>('/api/outfits/saved', {
+export const getSavedOutfit = async (outfitId: number) => {
+  const outfit = (await getSavedOutfits()).find(savedOutfit => savedOutfit.id_outfit === outfitId);
+  if (!outfit) throw new Error('No se encontró este outfit guardado.');
+  return outfit;
+};
+export const createSavedOutfit = (payload: { name: string; style: string; garmentIds: number[]; evaluation?: string }) => requestOutfits<{ id_outfit: number }>('/api/outfits/saved', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload)
+});
+export const generateOutfit = (payload: { request: string; previousGarmentIds: number[] }) => requestOutfits<GeneratedOutfit>('/api/outfits/generate', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(payload)

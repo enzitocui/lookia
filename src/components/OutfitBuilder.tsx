@@ -1,64 +1,87 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Check, Image as ImageIcon, Lightbulb, Sparkles, X } from 'lucide-react';
-
-export type OutfitResult = {
-  garments: Array<{
-    id: string | number;
-    name: string;
-    category: string;
-    color?: string;
-    imageUrl: string;
-  }>;
-  references: Array<{
-    id: string | number;
-    imageUrl: string;
-    alt: string;
-  }>;
-  explanation: {
-    reasons: string[];
-    requestMatch: string;
-    tips: string[];
-    complementaryItems: string[];
-  };
-  evaluation?: string;
-  wardrobeMessage?: string;
-};
-
-const previewGarments = [
-  { id: 'preview-garment-1', name: 'Prenda 1', category: 'Espacio para prenda' },
-  { id: 'preview-garment-2', name: 'Prenda 2', category: 'Espacio para prenda' },
-  { id: 'preview-garment-3', name: 'Prenda 3', category: 'Espacio para prenda' },
-];
-
-const previewReferences = [
-  { id: 'preview-reference-1', alt: 'Espacio para imagen de referencia' },
-  { id: 'preview-reference-2', alt: 'Espacio para imagen de referencia' },
-  { id: 'preview-reference-3', alt: 'Espacio para imagen de referencia' },
-];
-
-const previewRecommendation = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae justo vel neque malesuada consequat. Suspendisse potenti. Curabitur at lectus sed arcu feugiat varius, ut posuere sem facilisis.';
-const previewEvaluation = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent euismod, erat sed commodo consequat, tellus justo tincidunt nibh, a volutpat sapien nisl non urna.';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { Bookmark, Check, Image as ImageIcon, Lightbulb, LoaderCircle, RefreshCw, Sparkles, X } from 'lucide-react';
+import { createSavedOutfit, generateOutfit, type GeneratedOutfit, type OutfitGarmentCard } from '../services/api';
 
 type OutfitBuilderProps = {
-  result?: OutfitResult | null;
+  onOpenSavedOutfits: () => void;
 };
 
-export default function OutfitBuilder({ result = null }: OutfitBuilderProps) {
+export default function OutfitBuilder({ onOpenSavedOutfits }: OutfitBuilderProps) {
   const [request, setRequest] = useState('');
+  const [result, setResult] = useState<GeneratedOutfit | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [saveName, setSaveName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const saveInProgressRef = useRef(false);
+
+  const handleGenerate = async () => {
+    if (!request.trim() || isGenerating) return;
+    setIsGenerating(true);
+    setGenerationError(null);
+    setSaveError(null);
+    setSaveSuccess(false);
+    try {
+      const outfit = await generateOutfit({
+        request: request.trim(),
+        previousGarmentIds: result?.garments.map(garment => garment.id) ?? [],
+      });
+      setResult(outfit);
+      setIsPreviewOpen(true);
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : 'No se pudo generar el outfit.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!request.trim()) return;
-    setIsPreviewOpen(true);
+    void handleGenerate();
   };
+
+  const saveOutfit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalizedName = saveName.trim();
+    if (!result?.garments.length || !result.evaluation || saveInProgressRef.current) return;
+    if (!normalizedName) {
+      setSaveError('Ingresá un nombre para el outfit.');
+      return;
+    }
+    saveInProgressRef.current = true;
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+    try {
+      await createSavedOutfit({
+        name: normalizedName,
+        style: request.trim().slice(0, 80),
+        garmentIds: result.garments.map(garment => garment.id),
+        evaluation: result.evaluation,
+      });
+      setSaveSuccess(true);
+      setIsSaveDialogOpen(false);
+      setSaveName('');
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'No se pudo guardar el outfit.');
+    } finally {
+      saveInProgressRef.current = false;
+      setIsSaving(false);
+    }
+  };
+
+  const closePreview = useCallback(() => setIsPreviewOpen(false), []);
 
   return (
     <section className="outfit-builder" aria-labelledby="outfit-page-title">
       <div className="outfit-builder-heading">
         <span className="section-label">LOOKIA · TU ESTILO, A TU MANERA</span>
         <h2 id="outfit-page-title" className="font-headline">Creá tu outfit</h2>
-        <p>Contanos qué outfit estás buscando. La generación estará disponible próximamente.</p>
+        <p>Describí lo que buscás y LOOKIA combinará prendas reales de tu ropero.</p>
       </div>
 
       <form className="outfit-request panel" onSubmit={handleSubmit}>
@@ -69,27 +92,88 @@ export default function OutfitBuilder({ result = null }: OutfitBuilderProps) {
           id="outfit-request"
           value={request}
           maxLength={1000}
-          onChange={event => {
-            setRequest(event.target.value);
-          }}
-          placeholder="Ejemplo: Quiero un outfit estilo Y2K para salir con amigos..."
+          onChange={event => setRequest(event.target.value)}
+          placeholder="Ejemplo: Quiero un outfit casual para salir con amigos, cómodo, con colores oscuros y sin usar campera."
           rows={6}
+          required
         />
         <div className="outfit-request-footer">
-          <p>Podés describir libremente la ocasión, el estilo o cómo querés sentirte.</p>
-          <button type="submit" className="btn-accent rounded-full px-6 py-3" disabled={!request.trim()}>
-            <Sparkles size={18} aria-hidden="true" />
-            Generar outfit
+          <p>Podés contar la ocasión, el estilo, los colores y las prendas que preferís o querés evitar.</p>
+          <button type="submit" className="btn-accent rounded-full px-6 py-3" disabled={!request.trim() || isGenerating}>
+            {isGenerating
+              ? <LoaderCircle size={18} aria-hidden="true" className="outfit-generating-icon" />
+              : <Sparkles size={18} aria-hidden="true" />}
+            {isGenerating ? 'Generando…' : result ? 'Generar outfit' : 'Generar outfit'}
           </button>
         </div>
       </form>
 
-      {isPreviewOpen && <OutfitResultView result={result} onClose={() => setIsPreviewOpen(false)} />}
+      {generationError && <p className="outfit-feedback-error" role="alert">{generationError}</p>}
+      {isPreviewOpen && result && (
+        <OutfitResultView
+          result={result}
+          isGenerating={isGenerating}
+          generationError={generationError}
+          isSaveDialogOpen={isSaveDialogOpen}
+          isSaving={isSaving}
+          saveError={saveError}
+          saveSuccess={saveSuccess}
+          onClose={closePreview}
+          onGenerateAgain={() => void handleGenerate()}
+          onOpenSaveDialog={() => {
+            setSaveError(null);
+            setSaveName('');
+            setIsSaveDialogOpen(true);
+          }}
+          onCloseSaveDialog={() => {
+            if (!isSaving) {
+              setIsSaveDialogOpen(false);
+              setSaveError(null);
+            }
+          }}
+          onSave={saveOutfit}
+          saveName={saveName}
+          onSaveNameChange={setSaveName}
+          onOpenSavedOutfits={onOpenSavedOutfits}
+        />
+      )}
     </section>
   );
 }
 
-function OutfitResultView({ result, onClose }: { result: OutfitResult | null; onClose: () => void }) {
+function OutfitResultView({
+  result,
+  isGenerating,
+  generationError,
+  isSaveDialogOpen,
+  isSaving,
+  saveError,
+  saveSuccess,
+  onClose,
+  onGenerateAgain,
+  onOpenSaveDialog,
+  onCloseSaveDialog,
+  onSave,
+  saveName,
+  onSaveNameChange,
+  onOpenSavedOutfits,
+}: {
+  result: GeneratedOutfit;
+  isGenerating: boolean;
+  generationError: string | null;
+  isSaveDialogOpen: boolean;
+  isSaving: boolean;
+  saveError: string | null;
+  saveSuccess: boolean;
+  onClose: () => void;
+  onGenerateAgain: () => void;
+  onOpenSaveDialog: () => void;
+  onCloseSaveDialog: () => void;
+  onSave: (event: FormEvent<HTMLFormElement>) => void;
+  saveName: string;
+  onSaveNameChange: (value: string) => void;
+  onOpenSavedOutfits: () => void;
+}) {
   const dialogRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -97,87 +181,78 @@ function OutfitResultView({ result, onClose }: { result: OutfitResult | null; on
     document.body.style.overflow = 'hidden';
     dialogRef.current?.focus();
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape' && !isSaveDialogOpen) onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose]);
+  }, [isSaveDialogOpen, onClose]);
 
   return (
     <div className="outfit-preview-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="outfit-preview-modal" role="dialog" aria-modal="true" aria-labelledby="outfit-result-title" tabIndex={-1} ref={dialogRef}>
         <header className="outfit-preview-header">
           <div>
-            <span className="section-label">LOOKIA · VISTA PREVIA</span>
+            <span className="section-label">LOOKIA · TU ROPERO</span>
             <h3 id="outfit-result-title" className="font-headline">Tu propuesta de outfit</h3>
-            <p>Diseño de muestra · la generación todavía no está conectada</p>
+            <p>Prendas seleccionadas según tu solicitud.</p>
           </div>
           <button type="button" className="icon-button outfit-preview-close" aria-label="Cerrar ventana" onClick={onClose}><X size={22} /></button>
         </header>
+
         <div className="outfit-result-grid">
-          <section className="outfit-result-column panel" aria-labelledby="outfit-garments-title">
-            <h4 id="outfit-garments-title"><Check size={18} /> Prendas seleccionadas</h4>
-            <div className="outfit-garment-list">
-              {result
-                ? result.garments.length > 0
-                  ? result.garments.map(garment => <OutfitGarmentCard key={garment.id} garment={garment} />)
-                  : <p className="outfit-empty-wardrobe">{result.wardrobeMessage || 'No hay prendas seleccionadas para mostrar.'}</p>
-                : previewGarments.map(garment => <OutfitGarmentPlaceholder key={garment.id} garment={garment} />)}
-            </div>
-          </section>
-
-          <section className="outfit-result-column panel" aria-labelledby="outfit-references-title">
-            <h4 id="outfit-references-title"><ImageIcon size={18} /> Imágenes de referencia</h4>
-            <div className="outfit-reference-list">
-              {result
-                ? result.references.length > 0
-                  ? result.references.map(reference => (
-                  <figure className="outfit-reference-card" key={reference.id}>
-                    <img src={reference.imageUrl} alt={reference.alt} loading="lazy" />
-                  </figure>
-                  ))
-                  : <p className="outfit-empty-wardrobe">No hay imágenes de referencia para mostrar.</p>
-                : previewReferences.map(reference => <ReferenceImagePlaceholder key={reference.id} reference={reference} />)}
-            </div>
-          </section>
-
-          <OutfitExplanation
-            recommendation={result?.explanation.requestMatch ?? previewRecommendation}
-            evaluation={result?.evaluation ?? previewEvaluation}
-            isPlaceholder={!result}
-            explanation={result?.explanation}
-          />
+          <GarmentSection title="Prendas seleccionadas" garments={result.garments} emptyMessage={result.wardrobeMessage || 'No se encontraron prendas compatibles.'} className="outfit-result-garments" />
+          <GarmentSection title="Complementos disponibles" garments={result.complementaryItems} emptyMessage="No hay complementos disponibles que aporten a esta combinación." className="outfit-result-complementary" />
+          <OutfitEvaluation evaluation={result.evaluation} wardrobeMessage={result.wardrobeMessage} />
         </div>
+
+        {generationError && <p className="outfit-feedback-error" role="alert">{generationError}</p>}
+        <div className="outfit-result-actions">
+          {result.garments.length > 0 && result.evaluation && <button type="button" className="btn-accent rounded-full px-5 py-3" onClick={onOpenSaveDialog} disabled={isSaving}>
+            <Bookmark size={17} aria-hidden="true" /> Guardar outfit
+          </button>}
+          <button type="button" className="btn-outline rounded-full px-5 py-3" onClick={onGenerateAgain} disabled={isGenerating}>
+            {isGenerating ? <LoaderCircle size={17} aria-hidden="true" className="outfit-generating-icon" /> : <RefreshCw size={17} aria-hidden="true" />}
+            {isGenerating ? 'Generando…' : 'Otra combinación'}
+          </button>
+          {saveSuccess && <span className="outfit-request-notice" role="status">Outfit guardado en tu cuenta.</span>}
+          {saveError && <span className="outfit-feedback-error" role="alert">{saveError}</span>}
+          {saveSuccess && <button type="button" className="btn-outline rounded-full px-5 py-3" onClick={onOpenSavedOutfits}>Ver Mis outfits</button>}
+        </div>
+        {isSaveDialogOpen && <SaveOutfitDialog
+          name={saveName}
+          isSaving={isSaving}
+          error={saveError}
+          onNameChange={onSaveNameChange}
+          onCancel={onCloseSaveDialog}
+          onSubmit={onSave}
+        />}
       </section>
     </div>
   );
 }
 
-function OutfitGarmentPlaceholder({ garment }: { garment: typeof previewGarments[number] }) {
+function GarmentSection({ title, garments, emptyMessage, className }: { title: string; garments: OutfitGarmentCard[]; emptyMessage: string; className?: string }) {
   return (
-    <article className="outfit-garment-card outfit-garment-placeholder">
-      <div className="outfit-garment-image-placeholder" aria-hidden="true"><ImageIcon size={25} /></div>
-      <div><span>{garment.category}</span><h5>{garment.name}</h5></div>
-    </article>
+    <section className={`outfit-result-column panel ${className ?? ''}`}>
+      <h4><Check size={18} /> {title}</h4>
+      <div className="outfit-garment-list">
+        {garments.length > 0
+          ? garments.map(garment => <OutfitGarmentCard key={garment.id} garment={garment} />)
+          : <p className="outfit-empty-wardrobe">{emptyMessage}</p>}
+      </div>
+    </section>
   );
 }
 
-function ReferenceImagePlaceholder({ reference }: { reference: typeof previewReferences[number] }) {
-  return (
-    <figure className="outfit-reference-card outfit-reference-placeholder" role="img" aria-label={reference.alt}>
-      <ImageIcon size={28} aria-hidden="true" />
-      <span>Espacio para imagen</span>
-    </figure>
-  );
-}
-
-function OutfitGarmentCard({ garment }: { garment: OutfitResult['garments'][number] }) {
+function OutfitGarmentCard({ garment }: { garment: OutfitGarmentCard }) {
   return (
     <article className="outfit-garment-card">
-      <img src={garment.imageUrl} alt={garment.name} loading="lazy" />
+      {garment.imageUrl
+        ? <img src={garment.imageUrl} alt={garment.name} loading="lazy" />
+        : <div className="outfit-garment-image-placeholder" aria-hidden="true"><ImageIcon size={25} /></div>}
       <div>
         <span>{garment.category}</span>
         <h5>{garment.name}</h5>
@@ -187,35 +262,70 @@ function OutfitGarmentCard({ garment }: { garment: OutfitResult['garments'][numb
   );
 }
 
-function OutfitExplanation({
-  recommendation,
-  evaluation,
-  isPlaceholder,
-  explanation,
-}: {
-  recommendation: string;
-  evaluation: string;
-  isPlaceholder: boolean;
-  explanation?: OutfitResult['explanation'];
-}) {
+function OutfitEvaluation({ evaluation, wardrobeMessage }: { evaluation: string | null; wardrobeMessage?: string }) {
   return (
-    <section className="outfit-result-column outfit-explanation panel" aria-labelledby="outfit-explanation-title">
-      <h4 id="outfit-explanation-title"><Lightbulb size={18} /> Recomendación / evaluación de IA</h4>
-      <div className="outfit-copy-section">
-        <h5>Recomendación de IA</h5>
-        {isPlaceholder && <span className="outfit-copy-demo-label">Texto de muestra · Lorem Ipsum</span>}
-        <p>{recommendation}</p>
+    <section className="outfit-result-column outfit-explanation panel">
+      <h4><Lightbulb size={18} /> Evaluación del outfit</h4>
+      <div className="outfit-copy-section outfit-evaluation-copy">
+        {evaluation
+          ? <p>{evaluation}</p>
+          : <p>{wardrobeMessage || 'La IA no pudo evaluar esta combinación. Podés intentarlo nuevamente.'}</p>}
       </div>
-      <div className="outfit-copy-section outfit-evaluation-section">
-        <h5>Evaluación del outfit</h5>
-        {isPlaceholder && <span className="outfit-copy-demo-label">Texto de muestra · Lorem Ipsum</span>}
-        <p>{evaluation}</p>
-      </div>
-      {explanation && <div className="outfit-future-details">
-        {explanation.reasons.length > 0 && <><h5>Por qué se eligieron las prendas</h5><ul>{explanation.reasons.map((reason, index) => <li key={`${index}-${reason}`}>{reason}</li>)}</ul></>}
-        {explanation.tips.length > 0 && <><h5>Observaciones</h5><ul>{explanation.tips.map((tip, index) => <li key={`${index}-${tip}`}>{tip}</li>)}</ul></>}
-        {explanation.complementaryItems.length > 0 && <><h5>Para complementar tu ropero</h5><ul>{explanation.complementaryItems.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul></>}
-      </div>}
     </section>
+  );
+}
+
+function SaveOutfitDialog({
+  name,
+  isSaving,
+  error,
+  onNameChange,
+  onCancel,
+  onSubmit,
+}: {
+  name: string;
+  isSaving: boolean;
+  error: string | null;
+  onNameChange: (value: string) => void;
+  onCancel: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    inputRef.current?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isSaving) onCancel();
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [isSaving, onCancel]);
+  return (
+    <div className="outfit-save-backdrop" onMouseDown={event => { if (event.target === event.currentTarget && !isSaving) onCancel(); }}>
+      <form className="outfit-save-dialog panel" role="dialog" aria-modal="true" aria-labelledby="save-outfit-title" onSubmit={onSubmit}>
+        <span className="section-label">MIS OUTFITS</span>
+        <h4 id="save-outfit-title" className="font-headline">Guardá esta combinación</h4>
+        <p>Elegí un nombre para encontrar tu outfit fácilmente más adelante.</p>
+        <label className="wardrobe-field" htmlFor="save-outfit-name">Nombre del outfit
+          <input
+            ref={inputRef}
+            id="save-outfit-name"
+            value={name}
+            onChange={event => onNameChange(event.target.value)}
+            maxLength={80}
+            required
+            autoComplete="off"
+            placeholder="Ej. Casual para salir"
+          />
+        </label>
+        {error && <p className="outfit-feedback-error" role="alert">{error}</p>}
+        <div className="outfit-save-actions">
+          <button type="button" className="btn-outline rounded-full px-5 py-3" onClick={onCancel} disabled={isSaving}>Cancelar</button>
+          <button type="submit" className="btn-accent rounded-full px-5 py-3" disabled={isSaving || !name.trim()}>
+            {isSaving ? <LoaderCircle size={17} aria-hidden="true" className="outfit-generating-icon" /> : <Check size={17} aria-hidden="true" />}
+            {isSaving ? 'Guardando…' : 'Confirmar'}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

@@ -9,7 +9,7 @@ import outfits from './data/outfits.json';
 import { auraItems } from './data/aura';
 import OutfitBuilder from './components/OutfitBuilder';
 import SearchableSelect, { type SelectOption } from './components/SearchableSelect';
-import SavedOutfits from './components/SavedOutfits';
+import SavedOutfits, { SavedOutfitDetail } from './components/SavedOutfits';
 import {
   Menu,
   Compass,
@@ -157,6 +157,7 @@ const getProfilePhotoUrl = (photo: string | null) => {
 export default function App() {
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
   const [activeNav, setActiveNav] = useState('compass');
+  const [activeSavedOutfitId, setActiveSavedOutfitId] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [submenuOpen, setSubmenuOpen] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -873,7 +874,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => { setActiveNav('mis-outfits'); setMenuOpen(false); setSubmenuOpen(false); }}
-                  className={`sidebar-menu-item ${activeNav === 'mis-outfits' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'} rounded-xl px-3 py-2 font-body sidebar-menu-subitem`}
+                  className={`sidebar-menu-item ${activeNav === 'mis-outfits' || activeNav === 'outfit-detail' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'} rounded-xl px-3 py-2 font-body sidebar-menu-subitem`}
                 >
                   Mis outfits
                 </button>
@@ -976,7 +977,7 @@ export default function App() {
           {activeNav === 'crear-outfit' ? (
             authState === 'loading' ? (
               <section className="outfit-builder"><div className="panel rounded-3xl p-8 text-center">Verificando sesión…</div></section>
-            ) : !currentUser ? renderGuestAccessPanel() : <OutfitBuilder />
+            ) : !currentUser ? renderGuestAccessPanel() : <OutfitBuilder onOpenSavedOutfits={() => setActiveNav('mis-outfits')} />
           ) : activeNav === 'camera' && !currentUser ? (
             renderGuestAccessPanel()
           ) : activeNav === 'camera' ? (
@@ -1101,7 +1102,11 @@ export default function App() {
               </div>}
             </section>
           ) : activeNav === 'mis-outfits' ? (
-            !currentUser ? renderGuestAccessPanel() : <SavedOutfits garments={garments} wardrobeLoading={wardrobeLoading} wardrobeError={wardrobeError} onOpenWardrobe={() => setActiveNav('mi-ropa')} onRetryWardrobe={() => { void loadWardrobe(); }} />
+            !currentUser ? renderGuestAccessPanel() : <SavedOutfits garments={garments} wardrobeLoading={wardrobeLoading} wardrobeError={wardrobeError} onOpenWardrobe={() => setActiveNav('mi-ropa')} onRetryWardrobe={() => { void loadWardrobe(); }} onOpenOutfit={outfitId => { setActiveSavedOutfitId(outfitId); setActiveNav('outfit-detail'); }} />
+          ) : activeNav === 'outfit-detail' ? (
+            !currentUser ? renderGuestAccessPanel() : activeSavedOutfitId
+              ? <SavedOutfitDetail outfitId={activeSavedOutfitId} onBack={() => setActiveNav('mis-outfits')} />
+              : <SavedOutfits garments={garments} wardrobeLoading={wardrobeLoading} wardrobeError={wardrobeError} onOpenWardrobe={() => setActiveNav('mi-ropa')} onRetryWardrobe={() => { void loadWardrobe(); }} onOpenOutfit={outfitId => { setActiveSavedOutfitId(outfitId); setActiveNav('outfit-detail'); }} />
           ) : activeNav === 'auth-access' ? (
             renderGuestAccessPanel()
           ) : activeNav === 'auth-login' ? (

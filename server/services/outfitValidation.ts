@@ -1,8 +1,10 @@
 import { OutfitGenerationError, type WardrobeMetadata } from './nvidiaNim.ts';
+import type { ExploreReference } from './exploreReferences.ts';
 
 export type OutfitRecommendation = {
   selectedGarmentIds: number[];
   complementaryGarmentIds: number[];
+  usedReferenceIds: number[];
   evaluation: string;
 };
 
@@ -49,6 +51,7 @@ export const parseOutfitRecommendation = (content: string): OutfitRecommendation
   const expectedKeys = [
     'selectedGarmentIds',
     'complementaryGarmentIds',
+    'usedReferenceIds',
     'evaluation',
   ];
   if (Object.keys(response).length !== expectedKeys.length || expectedKeys.some(key => !(key in response))) {
@@ -58,6 +61,7 @@ export const parseOutfitRecommendation = (content: string): OutfitRecommendation
   return {
     selectedGarmentIds: readIds(response.selectedGarmentIds, 'selectedGarmentIds', 4),
     complementaryGarmentIds: readIds(response.complementaryGarmentIds, 'complementaryGarmentIds', 4),
+    usedReferenceIds: readIds(response.usedReferenceIds, 'usedReferenceIds', 2),
     evaluation: cleanText(response.evaluation, 'evaluation', 2000),
   };
 };
@@ -95,6 +99,7 @@ export const validateOutfitRecommendation = (
   request: string,
   wardrobe: WardrobeMetadata[],
   recommendation: OutfitRecommendation,
+  references: ExploreReference[] = [],
 ) => {
   const wardrobeById = new Map(wardrobe.map(garment => [garment.id_prendas, garment]));
   const allIds = [...recommendation.selectedGarmentIds, ...recommendation.complementaryGarmentIds];
@@ -103,6 +108,15 @@ export const validateOutfitRecommendation = (
   }
   if (allIds.some(id => !wardrobeById.has(id))) {
     throw new OutfitGenerationError('La respuesta de NVIDIA incluyó prendas que no pertenecen a tu ropero.');
+  }
+  const referenceIds = new Set(references.map(reference => reference.id));
+  if (recommendation.usedReferenceIds.some(id => !referenceIds.has(id))) {
+    throw new OutfitGenerationError('La respuesta de NVIDIA incluyó una referencia que no se utilizó en esta solicitud.');
+  }
+
+  const technicalEvaluation = /\b(?:id_prendas|id_users|id_outfit|selectedGarmentIds|complementaryGarmentIds|usedReferenceIds|sub_tipo|foto|json|sql|database|base de datos)\b|\b(?:tabla|campo)\s+(?:de\s+)?(?:prendas|outfits|base de datos)\b|\b(?:id|identificador)\s*[:#=]\s*\d+/i;
+  if (technicalEvaluation.test(recommendation.evaluation)) {
+    throw new OutfitGenerationError('La evaluación de NVIDIA contiene información técnica y no se puede mostrar.');
   }
 
   const excludedTerms = extractTerms(
@@ -126,6 +140,9 @@ export const validateOutfitRecommendation = (
   }
 
   const selected = recommendation.selectedGarmentIds.map(id => wardrobeById.get(id)!);
+  if (selected.some(garment => !normalizeText(recommendation.evaluation).includes(normalizeText(garment.sub_tipo || garment.tipo)))) {
+    throw new OutfitGenerationError('La evaluación de NVIDIA no identifica con claridad las prendas seleccionadas.');
+  }
   const selectedCategories = new Set(selected.map(garment => categoryName(garment.tipo)));
   const excludedCategories = new Set(
     ['superior', 'inferior'].filter(category => excludedTerms.some(term => (

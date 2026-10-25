@@ -58,9 +58,19 @@ export interface OutfitGarmentCard {
   imageUrl: string;
 }
 
+export interface ExploreReferenceImage {
+  id: number;
+  category: string;
+  gender: string;
+  url: string;
+  description: string;
+}
+
 export interface GeneratedOutfit {
   garments: OutfitGarmentCard[];
   complementaryItems: OutfitGarmentCard[];
+  referenceImages: ExploreReferenceImage[];
+  referenceMessage?: string;
   evaluation: string | null;
   wardrobeMessage?: string;
 }
@@ -112,7 +122,7 @@ export const createSavedOutfit = (payload: { name: string; style: string; garmen
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(payload)
 });
-export const generateOutfit = (payload: { request: string; previousGarmentIds: number[] }) => requestOutfits<GeneratedOutfit>('/api/outfits/generate', {
+export const generateOutfit = (payload: { request: string; previousGarmentIds: number[]; exploreCategory?: string }) => requestOutfits<GeneratedOutfit>('/api/outfits/generate', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(payload)

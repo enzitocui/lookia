@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Bookmark, Check, Image as ImageIcon, Lightbulb, LoaderCircle, RefreshCw, Sparkles, X } from 'lucide-react';
-import { createSavedOutfit, generateOutfit, type GeneratedOutfit, type OutfitGarmentCard } from '../services/api';
+import { createSavedOutfit, generateOutfit, type ExploreReferenceImage, type GeneratedOutfit, type OutfitGarmentCard } from '../services/api';
 
 type OutfitBuilderProps = {
+  exploreCategory: string;
   onOpenSavedOutfits: () => void;
 };
 
-export default function OutfitBuilder({ onOpenSavedOutfits }: OutfitBuilderProps) {
+export default function OutfitBuilder({ exploreCategory, onOpenSavedOutfits }: OutfitBuilderProps) {
   const [request, setRequest] = useState('');
   const [result, setResult] = useState<GeneratedOutfit | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -29,6 +30,7 @@ export default function OutfitBuilder({ onOpenSavedOutfits }: OutfitBuilderProps
       const outfit = await generateOutfit({
         request: request.trim(),
         previousGarmentIds: result?.garments.map(garment => garment.id) ?? [],
+        exploreCategory,
       });
       setResult(outfit);
       setIsPreviewOpen(true);
@@ -204,7 +206,11 @@ function OutfitResultView({
 
         <div className="outfit-result-grid">
           <GarmentSection title="Prendas seleccionadas" garments={result.garments} emptyMessage={result.wardrobeMessage || 'No se encontraron prendas compatibles.'} className="outfit-result-garments" />
-          <GarmentSection title="Complementos disponibles" garments={result.complementaryItems} emptyMessage="No hay complementos disponibles que aporten a esta combinación." className="outfit-result-complementary" />
+          <ExploreReferencesSection
+            references={result.referenceImages}
+            complementaryItems={result.complementaryItems}
+            emptyMessage={result.referenceMessage}
+          />
           <OutfitEvaluation evaluation={result.evaluation} wardrobeMessage={result.wardrobeMessage} />
         </div>
 
@@ -259,6 +265,54 @@ function OutfitGarmentCard({ garment }: { garment: OutfitGarmentCard }) {
         {garment.color && <p>{garment.color}</p>}
       </div>
     </article>
+  );
+}
+
+function ExploreReferencesSection({
+  references,
+  complementaryItems,
+  emptyMessage,
+}: {
+  references: ExploreReferenceImage[];
+  complementaryItems: OutfitGarmentCard[];
+  emptyMessage?: string;
+}) {
+  return (
+    <section className="outfit-result-column outfit-result-complementary panel">
+      <h4><ImageIcon size={18} /> Referencias de Explorar</h4>
+      <div className="outfit-reference-list">
+        {references.length > 0
+          ? references.map(reference => <ExploreReferenceCard key={reference.id} reference={reference} />)
+          : <p className="outfit-empty-wardrobe">{emptyMessage || 'No se utilizaron imágenes de referencia de Explorar para esta combinación.'}</p>}
+      </div>
+      <h5 className="outfit-reference-complements-title">Complementos de tu ropero</h5>
+      <div className="outfit-garment-list">
+        {complementaryItems.length > 0
+          ? complementaryItems.map(garment => <OutfitGarmentCard key={garment.id} garment={garment} />)
+          : <p className="outfit-empty-wardrobe">No hay prendas opcionales del ropero para sugerir.</p>}
+      </div>
+    </section>
+  );
+}
+
+function ExploreReferenceCard({ reference }: { reference: ExploreReferenceImage }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <figure className="outfit-reference-card">
+      {failed
+        ? <div className="outfit-reference-placeholder"><ImageIcon size={22} aria-hidden="true" /><span>No se pudo cargar la imagen de referencia.</span></div>
+        : <img
+          src={reference.url}
+          alt={`${reference.description} · ${reference.category}`}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+        />}
+      <figcaption>
+        <strong>{reference.category}</strong>
+        <span>{reference.description}</span>
+      </figcaption>
+    </figure>
   );
 }
 

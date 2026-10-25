@@ -3,6 +3,7 @@ import { sql } from '../db.ts';
 import { requireAuth } from '../auth/requireAuth.ts';
 import { OutfitGenerationError, requestOutfitFromNim, type WardrobeMetadata } from '../services/nvidiaNim.ts';
 import { parseOutfitRecommendation, validateOutfitRecommendation } from '../services/outfitValidation.ts';
+import { selectExploreReferences } from '../services/exploreReferences.ts';
 import { validateSavedOutfitInput } from '../services/savedOutfitValidation.ts';
 
 const router = Router();
@@ -173,6 +174,7 @@ router.post('/generate', requireAuth, async (req, res) => {
       return res.json({
         garments: [],
         complementaryItems: [],
+        referenceImages: [],
         evaluation: null,
         wardrobeMessage: 'Todavía no tenés prendas en tu ropero. Agregá algunas para crear una combinación personalizada.',
       });
@@ -181,15 +183,21 @@ router.post('/generate', requireAuth, async (req, res) => {
     if (!consumeGenerationLimit(userId)) {
       return res.status(429).json({ error: 'Alcanzaste el límite temporal de generaciones. Esperá unos minutos para volver a intentar.' });
     }
+    const references = selectExploreReferences(
+      request.trim(),
+      typeof req.body?.exploreCategory === 'string' ? req.body.exploreCategory : undefined,
+    );
     const modelContent = await requestOutfitFromNim(
       request.trim(),
       wardrobe.map(({ id_prendas, tipo, sub_tipo, color }) => ({ id_prendas, tipo, sub_tipo, color })),
       previousGarmentIds,
+      references,
     );
     const recommendation = validateOutfitRecommendation(
       request.trim(),
       wardrobe,
       parseOutfitRecommendation(modelContent),
+      references,
     );
     const wardrobeById = new Map(wardrobe.map(garment => [garment.id_prendas, garment]));
     const toClientGarment = (id: number) => {
@@ -204,10 +212,16 @@ router.post('/generate', requireAuth, async (req, res) => {
     };
     const garments = recommendation.selectedGarmentIds.map(toClientGarment);
     const complementaryItems = recommendation.complementaryGarmentIds.map(toClientGarment);
+    const referencesById = new Map(references.map(reference => [reference.id, reference]));
+    const referenceImages = recommendation.usedReferenceIds.map(id => referencesById.get(id)!);
 
     return res.json({
       garments,
       complementaryItems,
+      referenceImages,
+      referenceMessage: referenceImages.length
+        ? undefined
+        : 'No se utilizaron imágenes de referencia de Explorar para esta combinación.',
       evaluation: recommendation.evaluation,
       ...(garments.length === 0 ? {
         wardrobeMessage: 'No encontramos una combinación que cumpla tu pedido con las prendas disponibles.',

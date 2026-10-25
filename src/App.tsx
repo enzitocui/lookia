@@ -977,7 +977,10 @@ export default function App() {
           {activeNav === 'crear-outfit' ? (
             authState === 'loading' ? (
               <section className="outfit-builder"><div className="panel rounded-3xl p-8 text-center">Verificando sesión…</div></section>
-            ) : !currentUser ? renderGuestAccessPanel() : <OutfitBuilder onOpenSavedOutfits={() => setActiveNav('mis-outfits')} />
+            ) : !currentUser ? renderGuestAccessPanel() : <OutfitBuilder
+              exploreCategory={activeCategory}
+              onOpenSavedOutfits={() => setActiveNav('mis-outfits')}
+            />
           ) : activeNav === 'camera' && !currentUser ? (
             renderGuestAccessPanel()
           ) : activeNav === 'camera' ? (

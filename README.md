@@ -12,7 +12,7 @@ Aplicación web de Lookia con React y servidor Express/PostgreSQL.
 
 1. Install dependencies:
    `npm install`
-2. Configurá `DATABASE_URL` y `NVIDIA_NIM_API_KEY` en `.env` en el servidor. `.env` está excluido de Git; `.env.example` contiene solo valores de referencia.
+2. En local, configurá `DATABASE_URL` y `NVIDIA_NIM_API_KEY` en el archivo `.env` de la raíz del proyecto (podés usar `.env.example` como referencia). `npm run server` carga ese archivo con `dotenv/config`. En producción, definí esas variables en el entorno del servicio que ejecuta Express. `.env` está excluido de Git.
 3. Iniciá el backend y el frontend en terminales separadas:
    `npm run server`
    `npm run dev`

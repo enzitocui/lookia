@@ -1523,6 +1523,9 @@ input, textarea, select, button {
 
 .outfit-reference-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
 .outfit-reference-card { overflow: hidden; margin: 0; border-radius: 1rem; background: var(--background-alt); }
+.outfit-reference-card figcaption { display: grid; gap: 0.15rem; padding: 0.55rem 0.65rem; color: var(--text-muted); font-size: 0.7rem; line-height: 1.35; }
+.outfit-reference-card figcaption strong { color: var(--text); font-size: 0.75rem; }
+.outfit-reference-complements-title { margin: 1rem 0 0.45rem; color: var(--text); font-family: var(--font-headline); font-size: 0.9rem; font-weight: 700; }
 .outfit-reference-placeholder {
   min-height: 9rem;
   display: flex;

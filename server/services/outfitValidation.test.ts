@@ -15,6 +15,7 @@ const wardrobe = [
 const recommendation = (overrides: Record<string, unknown> = {}) => parseOutfitRecommendation(JSON.stringify({
   selectedGarmentIds: [1, 2],
   complementaryGarmentIds: [4],
+  usedReferenceIds: [],
   evaluation: 'La remera y el jean responden al estilo casual; el color azul no coincide del todo con la preferencia oscura. Podés sumar las zapatillas blancas disponibles para dar contraste.',
   ...overrides,
 }));
@@ -32,10 +33,53 @@ test('rejects invalid JSON, incomplete schema, and non-numeric ids', () => {
   assert.throws(() => recommendation({ evaluation: 'x'.repeat(2001) }), OutfitGenerationError);
 });
 
+test('rejects evaluations containing internal garment IDs or database field names', () => {
+  assert.throws(
+    () => validateOutfitRecommendation('Look casual', wardrobe, recommendation({
+      evaluation: 'La remera combina con el jean; id_prendas: 6 permite agregar una bufanda roja.',
+    })),
+    /información técnica/,
+  );
+});
+
+test('requires the evaluation to name the selected real garments', () => {
+  assert.throws(
+    () => validateOutfitRecommendation('Look casual', wardrobe, recommendation({
+      evaluation: 'La combinación cumple con el estilo casual y los colores elegidos.',
+    })),
+    /no identifica con claridad/,
+  );
+});
+
+test('accepts only reference IDs provided to the model and returns used references', () => {
+  const references = [{
+    id: 501,
+    category: 'Casual',
+    gender: 'women',
+    url: 'https://example.test/reference.jpg',
+    description: 'Casual Outfit',
+  }];
+  const result = validateOutfitRecommendation('Look casual', wardrobe, recommendation({
+    usedReferenceIds: [501],
+  }), references);
+  assert.deepEqual(result.usedReferenceIds, [501]);
+  assert.deepEqual(
+    validateOutfitRecommendation('Look casual', wardrobe, recommendation(), references).usedReferenceIds,
+    [],
+  );
+  assert.throws(
+    () => validateOutfitRecommendation('Look casual', wardrobe, recommendation({
+      usedReferenceIds: [999],
+    }), references),
+    /referencia que no se utilizó/,
+  );
+});
+
 test('allows up to four selected garments and does not require an accessory', () => {
   const fourGarments = recommendation({
     selectedGarmentIds: [1, 2, 4, 5],
     complementaryGarmentIds: [],
+    evaluation: 'La remera negra y el jean azul forman la base casual; las zapatillas blancas aportan contraste y el cinturón negro está disponible para completar el conjunto.',
   });
   assert.equal(validateOutfitRecommendation('Look casual', wardrobe, fourGarments).selectedGarmentIds.length, 4);
 

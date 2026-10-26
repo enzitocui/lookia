@@ -1,6 +1,12 @@
 import { Router, type Request } from 'express';
 import bcrypt from 'bcryptjs';
 import { sql } from '../db.ts';
+import {
+  establishExhibitionSession,
+  EXHIBITION_ACCOUNT_EMAIL,
+  isExhibitionAccount,
+  denyExhibitionAccount,
+} from '../auth/exhibitionAccount.ts';
 
 const router = Router();
 
@@ -32,7 +38,7 @@ const establishUserSession = (req: Request, userId: number) => new Promise<void>
   });
 });
 
-router.post('/register', async (req, res) => {
+router.post('/register', denyExhibitionAccount, async (req, res) => {
   const nombre = requireString(req.body?.nombre);
   const apellido = requireString(req.body?.apellido);
   const username = requireString(req.body?.username);
@@ -51,6 +57,9 @@ router.post('/register', async (req, res) => {
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Ingresá un email válido.' });
+  }
+  if (email.toLocaleLowerCase('en') === EXHIBITION_ACCOUNT_EMAIL) {
+    return res.status(409).json({ error: 'Este correo está reservado para la cuenta de exposición.' });
   }
 
   const userExists = await sql`
@@ -130,7 +139,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', denyExhibitionAccount, async (req, res) => {
   const identifier = requireString(req.body?.identifier);
   const contrasena = requireString(req.body?.contrasena);
 
@@ -139,6 +148,20 @@ router.post('/login', async (req, res) => {
   }
 
   try {
+    if (identifier.trim().toLocaleLowerCase('en') === EXHIBITION_ACCOUNT_EMAIL) {
+      if (!process.env.EXHIBITION_ACCOUNT_PASSWORD_HASH) {
+        return res.status(503).json({ error: 'La cuenta de exposición no está configurada.' });
+      }
+      const validExhibitionLogin = await isExhibitionAccount(
+        identifier,
+        contrasena,
+        process.env.EXHIBITION_ACCOUNT_PASSWORD_HASH,
+      );
+      if (!validExhibitionLogin) return res.status(401).json({ error: 'Credenciales inválidas.' });
+      await establishExhibitionSession(req);
+      return res.json({ message: 'Inicio de sesión exitoso.', user: null, exhibitionAccount: true });
+    }
+
     const [user] = await sql`
       SELECT *
       FROM public.users
@@ -200,6 +223,9 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/me', async (req, res) => {
+  if (req.session?.exhibitionAccount) {
+    return res.json({ user: null, exhibitionAccount: true });
+  }
   const userId = req.session?.userId;
 
   if (!userId) {

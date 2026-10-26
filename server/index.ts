@@ -11,6 +11,7 @@ import subTiposRouter from './routes/subTipos.ts';
 import usersRouter from './routes/users.ts';
 import outfitsRouter from './routes/outfits.ts';
 import { requireAuth } from './auth/requireAuth.ts';
+import { authorizeProfileUpload } from './auth/exhibitionAccount.ts';
 
 const app = express();
 const port = Number(process.env.PORT || 3001);
@@ -40,6 +41,7 @@ app.use('/uploads/prendas', requireAuth, (req, res, next) => {
   }
   return next();
 }, express.static(path.join(uploadsRoot, 'prendas')));
+app.use('/uploads/profile', authorizeProfileUpload, express.static(path.join(uploadsRoot, 'profile')));
 app.use('/uploads', express.static(uploadsRoot));
 
 app.get('/api/health', async (_req, res) => {

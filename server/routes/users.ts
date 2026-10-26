@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { sql } from '../db.ts';
+import { denyExhibitionAccount } from '../auth/exhibitionAccount.ts';
 
 const router = Router();
 
-router.get('/', async (_req, res) => {
+router.get('/', denyExhibitionAccount, async (_req, res) => {
   try {
     const users = await sql`
       SELECT

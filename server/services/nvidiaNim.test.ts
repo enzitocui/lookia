@@ -33,7 +33,8 @@ test('uses the configured NVIDIA NIM endpoint and sends selected Explore referen
 
   try {
     const response = await requestOutfitFromNim('Una combinación casual', wardrobe, [], references);
-    assert.equal(response, '{"selectedGarmentIds":[],"complementaryGarmentIds":[],"usedReferenceIds":[],"evaluation":"No hay prendas disponibles."}');
+    assert.equal(response.content, '{"selectedGarmentIds":[],"complementaryGarmentIds":[],"usedReferenceIds":[],"evaluation":"No hay prendas disponibles."}');
+    assert.equal(response.referencesIncluded, true);
     assert.equal(requestUrl, NVIDIA_NIM_ENDPOINT);
     assert.equal(requestInit?.method, 'POST');
     assert.equal(new Headers(requestInit?.headers).get('authorization'), 'Bearer test-key');
@@ -57,6 +58,7 @@ test('uses the configured NVIDIA NIM endpoint and sends selected Explore referen
     assert.match(payload.messages[0].content, /accesorios son opcionales/);
     assert.match(payload.messages[0].content, /evaluación/);
     assert.match(payload.messages[0].content, /Nunca incluyas IDs/);
+    assert.match(payload.messages[0].content, /imagen de referencia solo orienta y no demuestra/);
   } finally {
     globalThis.fetch = previousFetch;
     if (previousKey === undefined) delete process.env.NVIDIA_NIM_API_KEY;
@@ -77,13 +79,83 @@ test('does not send an image when no Explore reference candidate exists', async 
   };
 
   try {
-    await requestOutfitFromNim('Quiero un conjunto', wardrobe, [], []);
+    const response = await requestOutfitFromNim('Quiero un conjunto', wardrobe, [], []);
+    assert.equal(response.referencesIncluded, false);
     const payload = JSON.parse(String(requestInit?.body)) as {
       messages: Array<{ content: string | Array<{ type: string }> }>;
     };
     const userContent = payload.messages[1].content as Array<{ type: string }>;
     assert.ok(!userContent.some(part => part.type === 'image_url'));
   } finally {
+    globalThis.fetch = previousFetch;
+    if (previousKey === undefined) delete process.env.NVIDIA_NIM_API_KEY;
+    else process.env.NVIDIA_NIM_API_KEY = previousKey;
+  }
+});
+
+test('retries a rejected image request without references and marks them unavailable', async () => {
+  const previousKey = process.env.NVIDIA_NIM_API_KEY;
+  const previousFetch = globalThis.fetch;
+  process.env.NVIDIA_NIM_API_KEY = 'test-key';
+  const requests: RequestInit[] = [];
+  globalThis.fetch = async (_input, init) => {
+    requests.push(init ?? {});
+    if (requests.length === 1) {
+      return new Response(JSON.stringify({ error: { message: 'Invalid image_url' } }), { status: 400 });
+    }
+    return new Response(JSON.stringify({
+      choices: [{ message: { content: '{"selectedGarmentIds":[],"complementaryGarmentIds":[],"usedReferenceIds":[],"evaluation":"No hay prendas disponibles."}' } }],
+    }), { status: 200 });
+  };
+
+  try {
+    const response = await requestOutfitFromNim('Una combinación casual', wardrobe, [], references);
+    assert.equal(response.referencesIncluded, false);
+    assert.equal(requests.length, 2);
+    const firstPayload = JSON.parse(String(requests[0].body)) as {
+      messages: Array<{ content: string | Array<{ type: string }> }>;
+    };
+    const retryPayload = JSON.parse(String(requests[1].body)) as {
+      messages: Array<{ content: string | Array<{ type: string }> }>;
+    };
+    assert.ok((firstPayload.messages[1].content as Array<{ type: string }>).some(part => part.type === 'image_url'));
+    const retryContent = retryPayload.messages[1].content as Array<{ type: string; text?: string }>;
+    assert.ok(!retryContent.some(part => part.type === 'image_url'));
+    assert.ok(retryContent[0].text?.includes('"referenciasDeExplorarDisponibles":[]'));
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousKey === undefined) delete process.env.NVIDIA_NIM_API_KEY;
+    else process.env.NVIDIA_NIM_API_KEY = previousKey;
+  }
+});
+
+test('maps a 400 response without references to a safe gateway error and logs sanitized provider detail', async () => {
+  const previousKey = process.env.NVIDIA_NIM_API_KEY;
+  const previousFetch = globalThis.fetch;
+  const previousConsoleError = console.error;
+  const logged: unknown[][] = [];
+  process.env.NVIDIA_NIM_API_KEY = 'test-key';
+  console.error = (...args: unknown[]) => logged.push(args);
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    error: { message: 'Bad payload, test-key, Bearer private-token, Una combinación casual, https://example.test/image?token=secret' },
+  }), { status: 400 });
+
+  try {
+    await assert.rejects(
+      requestOutfitFromNim('Una combinación casual', wardrobe, [], []),
+      (error: unknown) => error instanceof OutfitGenerationError
+        && error.status === 502
+        && error.message === 'No pudimos generar el outfit. Intentá nuevamente.',
+    );
+    const logText = JSON.stringify(logged);
+    assert.ok(logText.includes('HTTP 400'));
+    assert.ok(logText.includes('Bad payload'));
+    assert.ok(!logText.includes('test-key'));
+    assert.ok(!logText.includes('private-token'));
+    assert.ok(!logText.includes('Una combinación casual'));
+    assert.ok(!logText.includes('example.test'));
+  } finally {
+    console.error = previousConsoleError;
     globalThis.fetch = previousFetch;
     if (previousKey === undefined) delete process.env.NVIDIA_NIM_API_KEY;
     else process.env.NVIDIA_NIM_API_KEY = previousKey;

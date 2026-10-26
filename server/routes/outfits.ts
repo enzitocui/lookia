@@ -187,17 +187,18 @@ router.post('/generate', requireAuth, async (req, res) => {
       request.trim(),
       typeof req.body?.exploreCategory === 'string' ? req.body.exploreCategory : undefined,
     );
-    const modelContent = await requestOutfitFromNim(
+    const modelResponse = await requestOutfitFromNim(
       request.trim(),
       wardrobe.map(({ id_prendas, tipo, sub_tipo, color }) => ({ id_prendas, tipo, sub_tipo, color })),
       previousGarmentIds,
       references,
     );
+    const referencesSent = modelResponse.referencesIncluded ? references : [];
     const recommendation = validateOutfitRecommendation(
       request.trim(),
       wardrobe,
-      parseOutfitRecommendation(modelContent),
-      references,
+      parseOutfitRecommendation(modelResponse.content),
+      referencesSent,
     );
     const wardrobeById = new Map(wardrobe.map(garment => [garment.id_prendas, garment]));
     const toClientGarment = (id: number) => {
@@ -212,7 +213,7 @@ router.post('/generate', requireAuth, async (req, res) => {
     };
     const garments = recommendation.selectedGarmentIds.map(toClientGarment);
     const complementaryItems = recommendation.complementaryGarmentIds.map(toClientGarment);
-    const referencesById = new Map(references.map(reference => [reference.id, reference]));
+    const referencesById = new Map(referencesSent.map(reference => [reference.id, reference]));
     const referenceImages = recommendation.usedReferenceIds.map(id => referencesById.get(id)!);
 
     return res.json({

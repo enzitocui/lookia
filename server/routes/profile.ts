@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { Router } from 'express';
 import { sql } from '../db.ts';
+import { requireAuth } from '../auth/requireAuth.ts';
 
 const router = Router();
 
@@ -20,14 +20,6 @@ const sanitizeUser = (user: Record<string, any>) => ({
   fecha_nacimiento: user.fecha_nacimiento,
   pais: user.pais,
 });
-
-const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.session?.userId) {
-    return res.status(401).json({ error: 'Debés iniciar sesión para continuar.' });
-  }
-
-  return next();
-};
 
 router.get('/', requireAuth, async (req, res) => {
   const userId = Number(req.session.userId);

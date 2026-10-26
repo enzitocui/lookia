@@ -17,7 +17,6 @@ import {
   Camera,
   Check,
   FileImage,
-  User,
   Upload,
   RotateCcw,
   ChevronLeft,
@@ -25,13 +24,14 @@ import {
   Edit3,
   Moon,
   Sun,
-  LogOut,
   Sparkles,
   Trash2,
   Pencil,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 import LogoImg from '../logo/Logo.png';
+import { createExhibitionCycle } from './services/exhibitionCycle';
 
 const CATEGORY_SEARCHES = {
   Boho: 'boho outfit fashion',
@@ -154,6 +154,41 @@ const getProfilePhotoUrl = (photo: string | null) => {
   return photo;
 };
 
+const waitForExploreImages = (category: ExploreCategory, signal: AbortSignal) => new Promise<boolean>(resolve => {
+  let frameId = 0;
+  const timeoutId = window.setTimeout(() => finish(false), 15000);
+  const finish = (hasContent: boolean) => {
+    window.cancelAnimationFrame(frameId);
+    window.clearTimeout(timeoutId);
+    signal.removeEventListener('abort', onAbort);
+    resolve(hasContent);
+  };
+  const onAbort = () => finish(false);
+  const checkImages = () => {
+    if (signal.aborted) {
+      finish(false);
+      return;
+    }
+    const grid = document.querySelector('.explore-grid');
+    if (!grid || grid.getAttribute('data-explore-category') !== category) {
+      frameId = window.requestAnimationFrame(checkImages);
+      return;
+    }
+    const images = Array.from(grid.querySelectorAll('img'));
+    if (!images.length) {
+      finish(false);
+      return;
+    }
+    if (images.every(image => image.complete)) {
+      finish(images.some(image => image.naturalWidth > 0));
+      return;
+    }
+    frameId = window.requestAnimationFrame(checkImages);
+  };
+  signal.addEventListener('abort', onAbort, { once: true });
+  frameId = window.requestAnimationFrame(checkImages);
+});
+
 export default function App() {
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
   const [activeNav, setActiveNav] = useState('compass');
@@ -170,8 +205,13 @@ export default function App() {
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [authForm, setAuthForm] = useState<AuthForm>(AUTH_FORM_INITIAL);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'guest'>('loading');
+  const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'guest' | 'exhibition'>('loading');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isExhibitionAccount, setIsExhibitionAccount] = useState(false);
+  const [exhibitionActive, setExhibitionActive] = useState(false);
+  const [accessNoticeOpen, setAccessNoticeOpen] = useState(false);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [headerMenuError, setHeaderMenuError] = useState<string | null>(null);
   const [profileForm, setProfileForm] = useState<ProfileForm>({
     nombre: '',
     apellido: '',
@@ -205,10 +245,14 @@ export default function App() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const profileFileInputRef = useRef<HTMLInputElement | null>(null);
+  const headerMenuRef = useRef<HTMLDivElement | null>(null);
   const initialSessionCheckStartedRef = useRef(false);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
   const firstSidebarItemRef = useRef<HTMLButtonElement | null>(null);
   const categoryRowRef = useRef<HTMLDivElement | null>(null);
+  const exhibitionCycleRef = useRef<ReturnType<typeof createExhibitionCycle<ExploreCategory>> | null>(null);
+  const exhibitionOriginalThemeRef = useRef<'dark' | 'light' | null>(null);
+  const exhibitionThemeStartedRef = useRef(false);
   const [canScrollCategoriesLeft, setCanScrollCategoriesLeft] = useState(false);
   const [canScrollCategoriesRight, setCanScrollCategoriesRight] = useState(false);
   const [failedImageIds, setFailedImageIds] = useState<Set<number | string>>(() => new Set());
@@ -221,21 +265,68 @@ export default function App() {
       const response = await fetch('/api/auth/me', { credentials: 'include' });
       if (!response.ok) {
         setCurrentUser(null);
+        setIsExhibitionAccount(false);
         setAuthState('guest');
         return null;
       }
 
       const data = await response.json();
+      if (data.exhibitionAccount === true) {
+        setCurrentUser(null);
+        setIsExhibitionAccount(true);
+        setAuthState('exhibition');
+        setExhibitionActive(sessionStorage.getItem('lookia-exhibition-stopped') !== 'true');
+        setActiveNav('compass');
+        return null;
+      }
       const user = data.user as User | undefined;
       setCurrentUser(user ?? null);
+      setIsExhibitionAccount(false);
       setAuthState(user ? 'authenticated' : 'guest');
       return user ?? null;
     } catch {
       setCurrentUser(null);
+      setIsExhibitionAccount(false);
       setAuthState('guest');
       return null;
     }
   }, []);
+
+  useEffect(() => {
+    if (!isExhibitionAccount || !exhibitionActive) return;
+    const savedTheme = localStorage.getItem('lookia-theme');
+    exhibitionOriginalThemeRef.current = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : theme;
+    exhibitionThemeStartedRef.current = false;
+    setTheme('dark');
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    const cycle = createExhibitionCycle<ExploreCategory>({
+      categories: CATEGORIES,
+      getScrollTop: () => window.scrollY,
+      getMaxScroll: () => Math.max(0, document.documentElement.scrollHeight - window.innerHeight),
+      setCategory: category => setActiveCategory(category),
+      setScrollTop: scrollTop => window.scrollTo({ top: scrollTop, behavior: 'instant' }),
+      waitForContent: (category, signal) => waitForExploreImages(category, signal),
+      onCategoryStart: () => {
+        if (!exhibitionThemeStartedRef.current) {
+          exhibitionThemeStartedRef.current = true;
+          return;
+        }
+        setTheme(previous => previous === 'dark' ? 'light' : 'dark');
+      },
+      categoryDurationMs: 20000,
+      onStop: () => {
+        const originalTheme = exhibitionOriginalThemeRef.current;
+        if (originalTheme) setTheme(originalTheme);
+        exhibitionOriginalThemeRef.current = null;
+      }
+    });
+    exhibitionCycleRef.current = cycle;
+    cycle.start();
+    return () => {
+      cycle.stop();
+      exhibitionCycleRef.current = null;
+    };
+  }, [exhibitionActive, isExhibitionAccount]);
 
   useEffect(() => {
     if (initialSessionCheckStartedRef.current) return;
@@ -269,8 +360,9 @@ export default function App() {
       const responses = [typesResponse, subtypesResponse, garmentsResponse];
       if (responses.some(response => response.status === 401)) {
         setCurrentUser(null);
+        setIsExhibitionAccount(false);
         setAuthState('guest');
-        setActiveNav('auth-access');
+        showAccessNotice();
         throw new Error('Tu sesión venció. Iniciá sesión para acceder a tu ropero.');
       }
       if (responses.some(response => !response.ok)) throw new Error('No se pudo cargar tu ropero. Intentá nuevamente.');
@@ -390,6 +482,24 @@ export default function App() {
       firstSidebarItemRef.current?.focus();
     }
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (!headerMenuOpen) return;
+    const closeMenuOnOutsideClick = (event: MouseEvent) => {
+      if (event.target instanceof Node && !headerMenuRef.current?.contains(event.target)) {
+        setHeaderMenuOpen(false);
+      }
+    };
+    const closeMenuOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setHeaderMenuOpen(false);
+    };
+    document.addEventListener('mousedown', closeMenuOnOutsideClick);
+    document.addEventListener('keydown', closeMenuOnEscape);
+    return () => {
+      document.removeEventListener('mousedown', closeMenuOnOutsideClick);
+      document.removeEventListener('keydown', closeMenuOnEscape);
+    };
+  }, [headerMenuOpen]);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('lookia-theme') as 'dark' | 'light' | null;
@@ -576,8 +686,9 @@ export default function App() {
       const data = await response.json().catch(() => ({}));
       if (response.status === 401) {
         setCurrentUser(null);
+        setIsExhibitionAccount(false);
         setAuthState('guest');
-        setActiveNav('auth-access');
+        showAccessNotice();
         throw new Error('Iniciá sesión para guardar prendas.');
       }
       if (!response.ok) throw new Error(data?.error || 'No se pudo guardar la prenda.');
@@ -614,8 +725,9 @@ export default function App() {
       const data = await response.json().catch(() => ({}));
       if (response.status === 401) {
         setCurrentUser(null);
+        setIsExhibitionAccount(false);
         setAuthState('guest');
-        setActiveNav('auth-access');
+        showAccessNotice();
         return;
       }
       if (!response.ok) throw new Error(data?.error || 'No se pudo editar la prenda.');
@@ -635,8 +747,9 @@ export default function App() {
       const data = await response.json().catch(() => ({}));
       if (response.status === 401) {
         setCurrentUser(null);
+        setIsExhibitionAccount(false);
         setAuthState('guest');
-        setActiveNav('auth-access');
+        showAccessNotice();
         return;
       }
       if (!response.ok) throw new Error(data?.error || 'No se pudo eliminar la prenda.');
@@ -680,13 +793,27 @@ export default function App() {
       }
 
       const user = data.user as User | undefined;
+      setIsExhibitionAccount(data.exhibitionAccount === true);
+      if (data.exhibitionAccount === true) {
+        setCurrentUser(null);
+        setAuthState('exhibition');
+        sessionStorage.removeItem('lookia-exhibition-stopped');
+        setExhibitionActive(true);
+        setActiveNav('compass');
+        setAuthForm(AUTH_FORM_INITIAL);
+        setHeaderMenuOpen(false);
+        setHeaderMenuError(null);
+        return;
+      }
       setCurrentUser(user ?? null);
       setAuthState('authenticated');
       setAuthForm(AUTH_FORM_INITIAL);
       setProfileError(null);
       setProfileSuccess(null);
-      setActiveNav('user');
+      setActiveNav('compass');
       setMenuOpen(false);
+      setHeaderMenuOpen(false);
+      setHeaderMenuError(null);
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : 'Hubo un error inesperado.');
     }
@@ -765,42 +892,48 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-    } catch {
-      // Ignored: UI should reset locally even if the request fails.
-    } finally {
+      const response = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error || 'No se pudo cerrar la sesión.');
       setCurrentUser(null);
+      setIsExhibitionAccount(false);
+      sessionStorage.removeItem('lookia-exhibition-stopped');
+      setExhibitionActive(false);
+      exhibitionCycleRef.current?.stop();
       setGarments([]);
       setGarmentSuccess(null);
       setAuthState('guest');
       setAuthForm(AUTH_FORM_INITIAL);
       setActiveNav('compass');
+      window.scrollTo({ top: 0, behavior: 'auto' });
       setMenuOpen(false);
       setSubmenuOpen(false);
       setProfileSuccess(null);
       setProfileError(null);
+      setHeaderMenuOpen(false);
+      setHeaderMenuError(null);
+    } catch (error) {
+      setHeaderMenuError(error instanceof Error ? error.message : 'No se pudo cerrar la sesión.');
     }
   };
 
-  const renderGuestAccessPanel = () => (
-    <section className="space-y-6 flex items-center justify-center min-h-[60vh]">
-      <div className="panel rounded-3xl p-8 max-w-xl w-full text-center">
-        <h2 className="font-headline text-4xl text-secondary mb-4">Accedé a todas las funciones de LOOKIA iniciando sesión.</h2>
-        <p className="font-body text-muted text-sm mb-6">La exploración pública sigue disponible sin registro, pero para ver tu perfil y personalizar tu experiencia necesitás una cuenta.</p>
-        <div className="flex flex-col sm:flex-row justify-center gap-3">
-          <button type="button" className="btn-accent rounded-full px-6 py-3" onClick={() => { setAuthMode('login'); setActiveNav('auth-login'); }}>
-            Iniciar sesión
-          </button>
-          <button type="button" className="btn-outline rounded-full px-6 py-3" onClick={() => { setAuthMode('register'); setActiveNav('auth-register'); }}>
-            Registrarse
-          </button>
-        </div>
-      </div>
-    </section>
-  );
+  const showAccessNotice = () => {
+    setAccessNoticeOpen(true);
+    setActiveNav('compass');
+    setMenuOpen(false);
+    setSubmenuOpen(false);
+  };
+
+  const stopExhibition = () => {
+    exhibitionCycleRef.current?.stop();
+    sessionStorage.setItem('lookia-exhibition-stopped', 'true');
+    setExhibitionActive(false);
+    setActiveCategory(CATEGORIES[0]);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  };
 
   return (
-    <div className="min-h-screen app-shell selection:bg-secondary/30 overflow-x-hidden">
+    <div className={`min-h-screen app-shell selection:bg-secondary/30 overflow-x-hidden ${isExhibitionAccount ? 'app-shell--exhibition' : ''} ${exhibitionActive ? 'app-shell--exhibition-active' : ''}`}>
       <input
         ref={fileInputRef}
         type="file"
@@ -809,13 +942,28 @@ export default function App() {
         onChange={handleFileChange}
         aria-label="Seleccionar imagen de una prenda"
       />
+      {accessNoticeOpen && (
+        <div className="access-notice-backdrop" role="presentation">
+          <section
+            className="access-notice-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="access-notice-title"
+            aria-describedby="access-notice-message"
+          >
+            <h2 id="access-notice-title">Acceso restringido</h2>
+            <p id="access-notice-message">Debés iniciar sesión para acceder a esta función</p>
+            <button type="button" className="btn-accent rounded-full px-5 py-2" onClick={() => setAccessNoticeOpen(false)}>Cerrar</button>
+          </section>
+        </div>
+      )}
       <aside
         id="sidebar"
         ref={sidebarRef}
         onKeyDown={handleSidebarKeyDown}
-        aria-hidden={!menuOpen}
+        aria-hidden={!menuOpen || isExhibitionAccount}
         aria-label="Menú lateral de navegación"
-        className={`sidebar-panel fixed inset-y-0 left-0 z-40 w-[min(18rem,80vw)] border-r border-white/10 bg-background/95 text-primary px-5 pt-6 pb-8 transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`sidebar-panel fixed inset-y-0 left-0 z-40 w-[min(18rem,80vw)] border-r border-white/10 bg-background/95 text-primary px-5 pt-6 pb-8 transition-transform duration-300 ease-out ${menuOpen && !isExhibitionAccount ? 'translate-x-0' : '-translate-x-full'} ${isExhibitionAccount ? 'hidden' : ''}`}
       >
         <div className="sidebar-brand-block relative w-full mb-6">
           <button
@@ -832,8 +980,8 @@ export default function App() {
           </div>
         </div>
 
-        <div className="sidebar-scroll-area flex min-h-0 flex-1 flex-col px-1 pb-1">
-          <nav className="sidebar-nav mb-6 flex min-h-0 flex-1 flex-col gap-2" aria-label="Navegación principal" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+        <div className="sidebar-content flex min-h-0 flex-1 flex-col px-1 pb-1">
+          <nav className="sidebar-nav mb-6 flex min-h-0 flex-1 flex-col gap-2" aria-label="Navegación principal">
             <button
               ref={firstSidebarItemRef}
               onClick={() => { setActiveNav('compass'); setMenuOpen(false); }}
@@ -845,10 +993,12 @@ export default function App() {
 
             <button
               onClick={() => {
-                if (!currentUser) {
-                  setActiveNav('auth-access');
+                if (isExhibitionAccount) {
                   setMenuOpen(false);
-                  setSubmenuOpen(false);
+                  return;
+                }
+                if (!currentUser) {
+                  showAccessNotice();
                   return;
                 }
                 setSubmenuOpen(prev => !prev);
@@ -882,7 +1032,14 @@ export default function App() {
             )}
 
             <button
-              onClick={() => { setActiveNav('crear-outfit'); setMenuOpen(false); }}
+              onClick={() => {
+                if (isExhibitionAccount) {
+                  setMenuOpen(false);
+                  return;
+                }
+                if (!currentUser) showAccessNotice();
+                else if (!isExhibitionAccount) { setActiveNav('crear-outfit'); setMenuOpen(false); }
+              }}
               className={`sidebar-menu-item ${activeNav === 'crear-outfit' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'} rounded-2xl px-4 py-3 font-body`}
             >
               <Sparkles size={18} />
@@ -891,9 +1048,12 @@ export default function App() {
 
             <button
               onClick={() => {
-                if (!currentUser) {
-                  setActiveNav('auth-access');
+                if (isExhibitionAccount) {
                   setMenuOpen(false);
+                  return;
+                }
+                if (!currentUser) {
+                  showAccessNotice();
                   return;
                 }
                 setActiveNav('camera');
@@ -910,45 +1070,14 @@ export default function App() {
               Subir
             </button>
 
-            <button
-              onClick={() => {
-                if (!currentUser) {
-                  setActiveNav('auth-access');
-                  setMenuOpen(false);
-                  return;
-                }
-                setActiveNav('user');
-                setMenuOpen(false);
-              }}
-              className={`sidebar-menu-item ${activeNav === 'user' ? 'sidebar-menu-item--active' : 'sidebar-menu-item--inactive'} rounded-2xl px-4 py-3 font-body`}
-            >
-              <User size={18} />
-              Perfil
-            </button>
-
-            {currentUser && (
-              <button
-                onClick={handleLogout}
-                className="sidebar-menu-item sidebar-menu-item--inactive rounded-2xl px-4 py-3 font-body"
-              >
-                <LogOut size={18} />
-                Cerrar sesión
-              </button>
-            )}
           </nav>
 
-          <div className="mt-auto pt-6">
-            <div className="w-full h-px bg-white/5 mb-3" />
-            <div className="text-center sidebar-footer">
-              <div className="mb-1">LOOKIA v1.0</div>
-            </div>
-          </div>
         </div>
       </aside>
 
-      <div className={`min-h-screen transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${menuOpen ? 'translate-x-[min(18rem,80vw)]' : 'translate-x-0'}`}>
-        <header className="app-bar fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 flex items-center justify-center relative">
-          <div className="absolute left-4 sm:left-6">
+      <div className={`min-h-screen transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${isExhibitionAccount ? '' : menuOpen ? 'translate-x-[min(18rem,80vw)]' : 'translate-x-0'}`}>
+        <header className="app-bar fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 flex items-center justify-center">
+          {!isExhibitionAccount && <div className="absolute left-4 sm:left-6">
             <button
               onClick={() => setMenuOpen(prev => !prev)}
               className="icon-button p-2 -ml-2 text-secondary rounded-full"
@@ -958,11 +1087,20 @@ export default function App() {
             >
               <Menu size={24} />
             </button>
-          </div>
+          </div>}
           <h1 className="font-headline font-extrabold app-header-logo logo-brand tracking-tighter uppercase">
             LOOKIA
           </h1>
-          <div className="absolute right-4 sm:right-6">
+          <div className="header-controls absolute right-4 sm:right-6">
+            {isExhibitionAccount ? (
+              <div className="exhibition-header-controls">
+                {exhibitionActive && <button type="button" className="exhibition-stop-button" onClick={stopExhibition}>STOP</button>}
+                <button type="button" className="exhibition-logout-button" aria-label="Cerrar sesión de exposición" title="Cerrar sesión" onClick={() => void handleLogout()}>
+                  <LogOut size={16} />
+                </button>
+                {headerMenuError && <span className="header-dropdown-error" role="alert">{headerMenuError}</span>}
+              </div>
+            ) : <>
             <button
               onClick={toggleTheme}
               className="icon-button p-2 -mr-2 text-secondary rounded-full"
@@ -970,19 +1108,99 @@ export default function App() {
             >
               {theme === 'dark' ? <Sun size={24} /> : <Moon size={24} />}
             </button>
+            {authState === 'authenticated' && currentUser ? (
+              <div ref={headerMenuRef} className="header-account-control">
+                <button
+                  type="button"
+                  className="header-avatar-button"
+                  onClick={() => { setHeaderMenuError(null); setHeaderMenuOpen(previous => !previous); }}
+                  aria-label="Abrir menú de cuenta"
+                  aria-expanded={headerMenuOpen}
+                  aria-controls="header-account-menu"
+                >
+                  <UserAvatar user={currentUser} />
+                </button>
+                {headerMenuOpen && <div id="header-account-menu" className="header-dropdown header-account-menu">
+                  <p className="header-dropdown-title">{[currentUser.nombre, currentUser.apellido].filter(Boolean).join(' ') || currentUser.username || 'Tu cuenta'}</p>
+                  <button type="button" onClick={() => { setActiveNav('user'); setHeaderMenuOpen(false); setHeaderMenuError(null); }}>
+                    Configurar cuenta
+                  </button>
+                  <button type="button" onClick={() => void handleLogout()}>
+                    Cerrar sesión
+                  </button>
+                  {headerMenuError && <p className="header-dropdown-error" role="alert">{headerMenuError}</p>}
+                </div>}
+              </div>
+            ) : authState === 'guest' ? (
+              <div ref={headerMenuRef} className="header-account-control">
+                <button
+                  type="button"
+                  className="header-login-button"
+                  onClick={() => {
+                    setAuthMode('login');
+                    setAuthError(null);
+                    setHeaderMenuError(null);
+                    setHeaderMenuOpen(previous => !previous);
+                  }}
+                  aria-expanded={headerMenuOpen}
+                  aria-controls="header-login-menu"
+                >
+                  Iniciar sesión
+                </button>
+                {headerMenuOpen && <div id="header-login-menu" className="header-dropdown header-login-menu">
+                  <form onSubmit={handleAuthSubmit}>
+                    <label>
+                      Correo electrónico
+                      <input
+                        type="email"
+                        autoComplete="email"
+                        value={authForm.identifier}
+                        onChange={event => setAuthForm({ ...authForm, identifier: event.target.value })}
+                        required
+                      />
+                    </label>
+                    <label>
+                      Contraseña
+                      <input
+                        type="password"
+                        autoComplete="current-password"
+                        value={authForm.contrasena}
+                        onChange={event => setAuthForm({ ...authForm, contrasena: event.target.value })}
+                        required
+                      />
+                    </label>
+                    {authError && <p className="header-dropdown-error" role="alert">{authError}</p>}
+                    <button type="submit" className="header-dropdown-submit">Iniciar sesión</button>
+                  </form>
+                  <p className="header-register-prompt">¿Todavía no tenés cuenta?</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode('register');
+                      setAuthError(null);
+                      setHeaderMenuOpen(false);
+                      setActiveNav('auth-register');
+                    }}
+                  >
+                    Registrarse
+                  </button>
+                </div>}
+              </div>
+            ) : <span className="header-account-placeholder" aria-hidden="true" />}
+            </>}
           </div>
         </header>
 
-        <main className={`app-main ${activeNav === 'camera' ? 'pt-0 pb-0 px-0 w-screen' : 'pt-0 pb-20 sm:pb-28 px-4 sm:px-5 lg:px-6 max-w-[1280px]'} ${activeNav === 'compass' ? 'app-main--explore' : ''} mx-auto editorial-gradient`}>
+        <main className={`app-main ${activeNav === 'camera' ? 'pt-0 pb-0 px-0 w-screen' : 'pt-0 pb-20 sm:pb-28 px-4 sm:px-5 lg:px-6 max-w-[1280px]'} ${activeNav === 'compass' ? 'app-main--explore' : ''} ${activeNav === 'crear-outfit' ? 'app-main--outfit-builder' : ''} mx-auto editorial-gradient`}>
           {activeNav === 'crear-outfit' ? (
             authState === 'loading' ? (
               <section className="outfit-builder"><div className="panel rounded-3xl p-8 text-center">Verificando sesión…</div></section>
-            ) : !currentUser ? renderGuestAccessPanel() : <OutfitBuilder
+            ) : !currentUser || isExhibitionAccount ? null : <OutfitBuilder
               exploreCategory={activeCategory}
               onOpenSavedOutfits={() => setActiveNav('mis-outfits')}
             />
-          ) : activeNav === 'camera' && !currentUser ? (
-            renderGuestAccessPanel()
+          ) : activeNav === 'camera' && (!currentUser || isExhibitionAccount) ? (
+            null
           ) : activeNav === 'camera' ? (
             <section className={`upload-page ${uploadMode === 'camera' ? 'upload-page--camera' : ''}`}>
               {uploadMode === 'choose' ? (
@@ -1068,7 +1286,7 @@ export default function App() {
               )}
             </section>
           ) : activeNav === 'mi-ropa' ? (
-            !currentUser ? renderGuestAccessPanel() : <section className="wardrobe-page">
+            !currentUser || isExhibitionAccount ? null : <section className="wardrobe-page">
               <div className="wardrobe-heading">
                 <div><span className="section-label">LOOKIA · TU ESPACIO</span><h2 className="font-headline">Mi ropero</h2></div>
                 <button type="button" disabled={wardrobeLoading} className="btn-accent rounded-full px-5 py-3" onClick={() => { setActiveNav('camera'); setUploadMode('choose'); setUploadConfirmed(false); setUploadFile(null); setFilePreviewUrl(null); }}>Agregar prenda</button>
@@ -1105,36 +1323,13 @@ export default function App() {
               </div>}
             </section>
           ) : activeNav === 'mis-outfits' ? (
-            !currentUser ? renderGuestAccessPanel() : <SavedOutfits garments={garments} wardrobeLoading={wardrobeLoading} wardrobeError={wardrobeError} onOpenWardrobe={() => setActiveNav('mi-ropa')} onRetryWardrobe={() => { void loadWardrobe(); }} onOpenOutfit={outfitId => { setActiveSavedOutfitId(outfitId); setActiveNav('outfit-detail'); }} />
+            !currentUser || isExhibitionAccount ? null : <SavedOutfits garments={garments} wardrobeLoading={wardrobeLoading} wardrobeError={wardrobeError} onOpenWardrobe={() => setActiveNav('mi-ropa')} onRetryWardrobe={() => { void loadWardrobe(); }} onOpenOutfit={outfitId => { setActiveSavedOutfitId(outfitId); setActiveNav('outfit-detail'); }} />
           ) : activeNav === 'outfit-detail' ? (
-            !currentUser ? renderGuestAccessPanel() : activeSavedOutfitId
+            !currentUser || isExhibitionAccount ? null : activeSavedOutfitId
               ? <SavedOutfitDetail outfitId={activeSavedOutfitId} onBack={() => setActiveNav('mis-outfits')} />
               : <SavedOutfits garments={garments} wardrobeLoading={wardrobeLoading} wardrobeError={wardrobeError} onOpenWardrobe={() => setActiveNav('mi-ropa')} onRetryWardrobe={() => { void loadWardrobe(); }} onOpenOutfit={outfitId => { setActiveSavedOutfitId(outfitId); setActiveNav('outfit-detail'); }} />
-          ) : activeNav === 'auth-access' ? (
-            renderGuestAccessPanel()
-          ) : activeNav === 'auth-login' ? (
-            <section className="flex items-center justify-center py-8 sm:py-12">
-              <div className="panel rounded-3xl p-6 sm:p-8 max-w-xl w-full">
-                <h2 className="font-headline text-4xl text-secondary mb-3 text-center">Iniciar sesión</h2>
-                <p className="text-center text-muted mb-6">Ingresá tu email o username para continuar.</p>
-                <form className="space-y-4" onSubmit={handleAuthSubmit}>
-                  <div>
-                    <label className="block text-sm mb-2 text-secondary/80">Email o username</label>
-                    <input type="text" value={authForm.identifier} onChange={(event) => setAuthForm({ ...authForm, identifier: event.target.value })} className="w-full rounded-2xl bg-background/70 border border-white/10 px-4 py-3 text-primary outline-none focus:border-primary/70" placeholder="tuemail@lookia.com" />
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-2 text-secondary/80">Contraseña</label>
-                    <input type="password" value={authForm.contrasena} onChange={(event) => setAuthForm({ ...authForm, contrasena: event.target.value })} className="w-full rounded-2xl bg-background/70 border border-white/10 px-4 py-3 text-primary outline-none focus:border-primary/70" placeholder="••••••••" />
-                  </div>
-                  {authError && <p className="text-sm text-accent-light">{authError}</p>}
-                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                    <button type="submit" className="btn-accent rounded-full px-6 py-3 flex-1">Iniciar sesión</button>
-                    <button type="button" className="btn-outline rounded-full px-6 py-3 flex-1" onClick={() => { setAuthMode('register'); setActiveNav('auth-register'); setAuthError(null); }}>Registrarme</button>
-                  </div>
-                </form>
-              </div>
-            </section>
           ) : activeNav === 'auth-register' ? (
+            isExhibitionAccount ? null :
             <section className="flex items-center justify-center py-8 sm:py-12">
               <div className="panel rounded-3xl p-6 sm:p-8 max-w-2xl w-full">
                 <h2 className="font-headline text-4xl text-secondary mb-3 text-center">Crear cuenta</h2>
@@ -1177,17 +1372,16 @@ export default function App() {
                   {authError && <p className="text-sm text-accent-light">{authError}</p>}
                   <div className="flex flex-col sm:flex-row gap-3 pt-2">
                     <button type="submit" className="btn-accent rounded-full px-6 py-3 flex-1">Crear cuenta</button>
-                    <button type="button" className="btn-outline rounded-full px-6 py-3 flex-1" onClick={() => { setAuthMode('login'); setActiveNav('auth-login'); setAuthError(null); }}>Ya tengo cuenta</button>
+                    <button type="button" className="btn-outline rounded-full px-6 py-3 flex-1" onClick={() => { setAuthMode('login'); setActiveNav('compass'); setHeaderMenuOpen(true); setAuthError(null); }}>Ya tengo cuenta</button>
                   </div>
                 </form>
               </div>
             </section>
           ) : activeNav === 'user' ? (
+            !currentUser || isExhibitionAccount ? null :
             <section className="profile-page">
               {authState === 'loading' ? (
                 <div className="profile-loading panel" role="status">Verificando sesión…</div>
-              ) : !currentUser ? (
-                renderGuestAccessPanel()
               ) : (
                 <div className="profile-layout">
                   <header className="profile-heading">
@@ -1270,9 +1464,10 @@ export default function App() {
                   {CATEGORIES.map((cat, idx) => (
                     <motion.button
                       key={cat}
-                      initial={{ opacity: 0, x: 20 }}
+                      initial={isExhibitionAccount ? false : { opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.05 }}
+                      transition={{ delay: isExhibitionAccount ? 0 : idx * 0.05, duration: isExhibitionAccount ? 0 : 0.4 }}
+                      disabled={isExhibitionAccount}
                       onClick={() => setActiveCategory(cat)}
                       className={`category-pill ${activeCategory === cat ? 'category-pill--active' : 'category-pill--inactive'}`}
                     >
@@ -1292,21 +1487,22 @@ export default function App() {
                 )}
               </div>
 
-              <div className="explore-grid">
+              <div key={activeCategory} className="explore-grid" data-explore-category={activeCategory}>
                 <AnimatePresence mode="popLayout">
                   {filteredItems.map((item, idx) => (
                     <motion.div
                       key={item.id}
                       layout
-                      initial={{ opacity: 0, scale: 0.9 }}
+                      initial={isExhibitionAccount ? false : { opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ duration: 0.4, delay: idx * 0.05 }}
+                      exit={isExhibitionAccount ? undefined : { opacity: 0, scale: 0.9 }}
+                      transition={{ duration: isExhibitionAccount ? 0 : 0.4, delay: isExhibitionAccount ? 0 : idx * 0.05 }}
                       className="explore-grid-item group relative rounded-2xl overflow-hidden bg-surface-container shadow-2xl"
                     >
                       <img
                         src={item.url}
                         alt={item.description}
+                        loading={isExhibitionAccount ? 'eager' : 'lazy'}
                         referrerPolicy="no-referrer"
                         onError={() => setFailedImageIds(previous => new Set(previous).add(item.id))}
                         className="w-full object-cover transition-transform duration-700 group-hover:scale-110"
@@ -1327,6 +1523,25 @@ export default function App() {
         </main>
       </div>
     </div>
+  );
+}
+
+function UserAvatar({ user }: { user: User }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const photoUrl = getProfilePhotoUrl(user.photo);
+  const initials = [user.nombre, user.apellido]
+    .filter((name): name is string => Boolean(name?.trim()))
+    .map(name => name.trim()[0])
+    .slice(0, 2)
+    .join('')
+    .toLocaleUpperCase('es') || user.username?.[0]?.toLocaleUpperCase('es') || 'L';
+
+  return (
+    <span className="header-avatar" aria-hidden="true">
+      {photoUrl && !imageFailed
+        ? <img src={photoUrl} alt="" onError={() => setImageFailed(true)} />
+        : <span>{initials}</span>}
+    </span>
   );
 }
 

@@ -202,7 +202,7 @@
   padding-bottom: clamp(0.7rem, 1.6vw, 1rem);
 }
 
-.sidebar-scroll-area {
+.sidebar-content {
   min-height: 0;
   overflow: hidden;
 }
@@ -210,21 +210,15 @@
 .sidebar-nav {
   min-height: 0;
   padding-bottom: 0.35rem;
+  justify-content: space-evenly;
   overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: rgb(123 63 228 / 0.25) rgb(123 63 228 / 0.06);
+  overflow-y: hidden;
 }
 
-.sidebar-nav::-webkit-scrollbar { width: 6px; }
-.sidebar-nav::-webkit-scrollbar-track { background: rgb(123 63 228 / 0.06); border-radius: 999px; }
-.sidebar-nav::-webkit-scrollbar-thumb { background: rgb(123 63 228 / 0.25); border-radius: 999px; }
-.sidebar-nav::-webkit-scrollbar-thumb:hover { background: rgb(123 63 228 / 0.35); }
 .sidebar-nav > .sidebar-menu-item,
 .sidebar-nav > #submenu-ropo { flex-shrink: 0; }
 
-.sidebar-scroll-area > .mt-auto {
+.sidebar-content > .mt-auto {
   flex: 0 0 auto;
 }
 
@@ -274,7 +268,6 @@
 }
 
 [data-theme="light"] .sidebar-footer { color: var(--text-muted); }
-[data-theme="light"] .sidebar-nav { scrollbar-color: rgb(123 63 228 / 0.2) rgb(123 63 228 / 0.06); }
 
 .sidebar-panel .icon-button.absolute {
   right: 0.15rem;
@@ -1456,14 +1449,14 @@ input, textarea, select, button {
 
 .outfit-result-grid {
   display: grid;
-  grid-template-areas: "garments complementary evaluation";
+  grid-template-areas: "garments reference evaluation";
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr);
   align-items: start;
   gap: 1rem;
 }
 
 .outfit-result-garments { grid-area: garments; }
-.outfit-result-complementary { grid-area: complementary; }
+.outfit-result-reference { grid-area: reference; }
 .outfit-result-grid > .outfit-explanation { grid-area: evaluation; }
 
 .outfit-result-column {
@@ -1525,7 +1518,6 @@ input, textarea, select, button {
 .outfit-reference-card { overflow: hidden; margin: 0; border-radius: 1rem; background: var(--background-alt); }
 .outfit-reference-card figcaption { display: grid; gap: 0.15rem; padding: 0.55rem 0.65rem; color: var(--text-muted); font-size: 0.7rem; line-height: 1.35; }
 .outfit-reference-card figcaption strong { color: var(--text); font-size: 0.75rem; }
-.outfit-reference-complements-title { margin: 1rem 0 0.45rem; color: var(--text); font-family: var(--font-headline); font-size: 0.9rem; font-weight: 700; }
 .outfit-reference-placeholder {
   min-height: 9rem;
   display: flex;
@@ -1566,14 +1558,14 @@ input, textarea, select, button {
 
 @media (max-width: 1024px) {
   .outfit-result-grid, .outfit-preview-modal .outfit-result-grid {
-    grid-template-areas: "garments evaluation" "complementary evaluation";
+    grid-template-areas: "garments evaluation" "reference evaluation";
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
   }
 }
 
 @media (max-width: 640px) {
   .outfit-result-grid, .outfit-preview-modal .outfit-result-grid {
-    grid-template-areas: "garments" "evaluation" "complementary";
+    grid-template-areas: "garments" "evaluation" "reference";
     grid-template-columns: minmax(0, 1fr);
   }
   .outfit-result-grid > .outfit-explanation { grid-column: auto; }
@@ -1692,6 +1684,241 @@ input, textarea, select, button {
   .saved-outfit-form-actions { align-items: stretch; flex-direction: column; }
   .saved-outfit-form-actions button { width: 100%; }
   .saved-outfit-items { grid-template-columns: minmax(0, 1fr); }
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.header-account-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.header-login-button,
+.header-avatar-button {
+  display: inline-flex;
+  min-height: 2.65rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-active);
+  border-radius: 9999px;
+  color: var(--text);
+  background: var(--surface);
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.header-login-button {
+  padding: 0.55rem 0.9rem;
+  color: var(--accent-light);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.header-login-button:hover,
+.header-avatar-button:hover { background: var(--surface-hover); }
+
+.header-avatar-button {
+  width: 2.65rem;
+  padding: 0.15rem;
+}
+
+.header-avatar {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  place-items: center;
+  color: var(--text);
+  background: linear-gradient(145deg, var(--primary), var(--accent));
+  border-radius: 50%;
+  font-family: var(--font-headline);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.header-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.header-account-placeholder { width: 2.65rem; height: 2.65rem; }
+
+.header-dropdown {
+  position: absolute;
+  top: calc(100% + 0.65rem);
+  right: 0;
+  z-index: 80;
+  width: min(20rem, calc(100vw - 1rem));
+  padding: 1rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-active);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-lg), 0 18px 45px rgba(0, 0, 0, 0.24);
+}
+
+.header-dropdown form { display: grid; gap: 0.7rem; }
+.header-dropdown label { display: grid; gap: 0.3rem; color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; }
+.header-dropdown input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.65rem;
+  padding: 0.55rem 0.7rem;
+  color: var(--text);
+  background: var(--background-alt);
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  outline: none;
+  font-size: 0.875rem;
+}
+.header-dropdown input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.13); }
+.header-dropdown > button,
+.header-dropdown-submit {
+  display: flex;
+  width: 100%;
+  min-height: 2.55rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.75rem;
+  color: var(--text);
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-align: left;
+}
+.header-dropdown > button:hover { background: var(--surface-active); }
+.header-dropdown .header-dropdown-submit { margin-top: 0.1rem; color: white; background: var(--primary); border-color: var(--primary); }
+.header-dropdown-title { margin: 0 0 0.65rem; overflow-wrap: anywhere; font-family: var(--font-headline); font-size: 0.95rem; font-weight: 700; }
+.header-register-prompt { margin: 0.8rem 0 0.35rem; color: var(--text-muted); font-size: 0.75rem; }
+.header-dropdown-error { margin: 0; color: #fb7185; font-size: 0.78rem; line-height: 1.4; overflow-wrap: anywhere; }
+
+.app-main--outfit-builder {
+  display: flex;
+  min-height: calc(100dvh - 5.25rem);
+  align-items: center;
+  padding-bottom: 1rem;
+}
+
+.app-main--outfit-builder .outfit-builder {
+  min-height: 0;
+  padding: 5rem 0 1rem;
+}
+
+.app-main--outfit-builder .outfit-builder-heading { margin-bottom: 1.1rem; }
+.app-main--outfit-builder .outfit-builder-heading h2 { margin-top: 0.25rem; font-size: clamp(2rem, 4vw, 2.8rem); }
+.app-main--outfit-builder .outfit-builder-heading p { margin-top: 0.45rem; line-height: 1.5; }
+.app-main--outfit-builder .outfit-request { padding: clamp(1rem, 2vw, 1.4rem); }
+.app-main--outfit-builder .outfit-request textarea { min-height: 7.5rem; padding: 0.8rem 0.9rem; line-height: 1.5; }
+.app-main--outfit-builder .outfit-request-footer { margin-top: 0.75rem; }
+
+.outfit-preview-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 76rem);
+  max-height: min(92dvh, 52rem);
+  overflow-y: auto;
+  padding: clamp(0.9rem, 1.8vw, 1.4rem);
+}
+
+.outfit-preview-header { flex: 0 0 auto; margin-bottom: 0.85rem; }
+.outfit-preview-header h3 { font-size: clamp(1.45rem, 2.5vw, 1.9rem); }
+.outfit-result-grid,
+.outfit-preview-modal .outfit-result-grid {
+  grid-template-areas: "garments reference evaluation";
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 0.95fr) minmax(0, 1.15fr);
+  align-items: stretch;
+  gap: 0.7rem;
+}
+
+.outfit-result-column { padding: 0.85rem; border-radius: 1rem; }
+.outfit-result-column > h4 { gap: 0.4rem; margin-bottom: 0.65rem; font-size: 0.94rem; }
+.outfit-result-column > h4 svg { width: 16px; height: 16px; }
+.outfit-garment-list { max-height: min(48dvh, 27rem); overflow-y: auto; gap: 0.5rem; padding-right: 0.2rem; }
+.outfit-reference-list { max-height: none; overflow: visible; grid-template-columns: minmax(0, 1fr); }
+.outfit-reference-card img { height: auto; min-height: 0; max-height: min(48dvh, 28rem); aspect-ratio: 4 / 5; object-fit: cover; }
+.outfit-reference-card:first-child { grid-row: auto; }
+.outfit-reference-card:first-child img { min-height: 0; }
+.outfit-reference-card figcaption { padding: 0.45rem 0.55rem; }
+.outfit-empty-wardrobe { padding: 0.75rem; font-size: 0.8rem; line-height: 1.45; }
+.outfit-garment-card { grid-template-columns: 3.5rem minmax(0, 1fr); gap: 0.6rem; padding: 0.45rem; border-radius: 0.8rem; }
+.outfit-garment-card img,
+.outfit-garment-image-placeholder { width: 3.5rem; border-radius: 0.6rem; }
+.outfit-garment-card h5 { font-size: 0.85rem; }
+.outfit-garment-card p { font-size: 0.74rem; }
+.outfit-explanation > p,
+.outfit-explanation li,
+.outfit-copy-section p { font-size: 0.82rem; line-height: 1.5; }
+.outfit-copy-section { padding: 0.7rem; border-radius: 0.8rem; }
+.outfit-result-actions {
+  position: sticky;
+  bottom: -0.65rem;
+  z-index: 2;
+  flex: 0 0 auto;
+  margin-top: 0.65rem;
+  padding: 0.45rem 0 0.1rem;
+  background: var(--surface);
+}
+.outfit-result-actions button { min-height: 2.55rem; padding-block: 0.55rem; font-size: 0.82rem; }
+
+@media (max-height: 680px) {
+  .sidebar-panel { overflow-x: hidden; overflow-y: auto; }
+  .sidebar-content { flex: 1 0 auto; overflow: visible; }
+  .sidebar-nav { flex: 0 0 auto; justify-content: flex-start; overflow: visible; }
+  .sidebar-brand-block { padding-top: 0.2rem; padding-bottom: 0.45rem; }
+  .sidebar-logo { width: min(100%, 6rem); }
+  .sidebar-logo-wrapper .logo-brand { margin-top: 0.25rem; }
+}
+
+@media (max-width: 900px) {
+  .outfit-preview-modal { max-height: 90dvh; }
+  .outfit-result-grid,
+  .outfit-preview-modal .outfit-result-grid {
+    grid-template-areas: "garments" "reference" "evaluation";
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .outfit-garment-list { max-height: none; overflow: visible; }
+  .outfit-reference-list { max-width: 24rem; }
+  .outfit-reference-card img { max-height: 25rem; }
+}
+
+@media (max-width: 640px) {
+  .header-controls { right: 0.65rem; gap: 0.15rem; }
+  .header-controls > .icon-button { margin: 0; }
+  .header-login-button { min-height: 2.45rem; padding-inline: 0.65rem; font-size: 0.73rem; }
+  .header-avatar-button { width: 2.45rem; min-height: 2.45rem; }
+  .header-account-placeholder { width: 2.45rem; height: 2.45rem; }
+  .app-main--outfit-builder { min-height: 0; align-items: flex-start; padding-bottom: 1rem; }
+  .app-main--outfit-builder .outfit-builder { padding: 4.5rem 0 1rem; }
+  .app-main--outfit-builder .outfit-builder-heading { margin-bottom: 0.75rem; }
+  .app-main--outfit-builder .outfit-builder-heading h2 { font-size: 1.8rem; }
+  .app-main--outfit-builder .outfit-request textarea { min-height: 7rem; }
+  .outfit-preview-backdrop { align-items: flex-end; padding: 0; }
+  .outfit-preview-modal {
+    width: 100%;
+    max-height: 92dvh;
+    padding: 0.8rem;
+    border-radius: 1.1rem 1.1rem 0 0;
+  }
+  .outfit-preview-header { gap: 0.5rem; }
+  .outfit-preview-header h3 { font-size: 1.35rem; }
+  .outfit-preview-header p { max-width: 17rem; }
+  .outfit-preview-close { width: 2.5rem; height: 2.5rem; }
+  .outfit-result-column { padding: 0.7rem; }
+  .outfit-result-actions { gap: 0.4rem; }
+  .outfit-result-actions button { flex: 1 1 auto; padding-inline: 0.7rem; }
+  .header-dropdown { right: -0.1rem; }
+}
+
+@media (max-width: 380px) {
+  .header-controls { right: 0.5rem; gap: 0.05rem; }
+  .header-login-button { padding-inline: 0.5rem; font-size: 0.7rem; }
+  .header-controls > .icon-button { padding: 0.35rem; }
+  .outfit-result-actions { align-items: stretch; }
+  .outfit-result-actions button { flex-basis: 100%; }
 }
 
 @layer utilities {
@@ -1998,4 +2225,122 @@ input, textarea, select, button {
 
 @media (min-width: 641px) and (max-width: 767px) {
   .profile-summary { grid-template-columns: minmax(0, 1fr); }
+}
+
+.access-notice-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(8, 7, 16, 0.54);
+  backdrop-filter: blur(5px);
+}
+
+.access-notice-dialog {
+  width: min(100%, 25rem);
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-active);
+  border-radius: 1.25rem;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
+}
+
+.access-notice-dialog h2 {
+  margin: 0 0 0.55rem;
+  color: var(--accent);
+  font-family: var(--font-headline);
+  font-size: 1.25rem;
+}
+
+.access-notice-dialog p { margin: 0 0 1.1rem; color: var(--text-secondary); }
+
+.exhibition-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.exhibition-stop-button,
+.exhibition-logout-button {
+  display: inline-flex;
+  min-width: 2.4rem;
+  min-height: 2.4rem;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  background: rgba(var(--surface-rgb), 0.86);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.exhibition-stop-button {
+  padding: 0 0.8rem;
+  color: #fff;
+  background: rgba(160, 34, 47, 0.84);
+  border-color: rgba(255, 120, 130, 0.45);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.exhibition-logout-button { opacity: 0.58; }
+.exhibition-logout-button:hover, .exhibition-logout-button:focus-visible { opacity: 1; }
+
+.app-shell--exhibition,
+.app-shell--exhibition * {
+  scroll-behavior: auto !important;
+  transition-duration: 0ms !important;
+}
+
+.app-shell--exhibition .app-main--explore {
+  width: 100%;
+  max-width: none;
+  padding: clamp(5.5rem, 8vh, 7rem) clamp(1.5rem, 5vw, 6rem) 3rem;
+}
+
+.app-shell--exhibition .category-nav { margin-bottom: clamp(1.4rem, 3vh, 2.5rem); }
+.app-shell--exhibition .category-nav-button { display: none; }
+.app-shell--exhibition .categories-row {
+  justify-content: center;
+  flex-wrap: wrap;
+  overflow: hidden;
+  gap: clamp(0.55rem, 1vw, 1rem);
+}
+.app-shell--exhibition .category-pill {
+  min-height: 3rem;
+  padding: 0.65rem 1.2rem;
+  font-size: clamp(0.9rem, 1.1vw, 1.15rem);
+}
+
+.app-shell--exhibition .explore-grid-item { margin-bottom: clamp(1rem, 1.8vw, 2rem); }
+.app-shell--exhibition .explore-grid {
+  column-width: clamp(19rem, 24vw, 30rem);
+  column-gap: clamp(1rem, 1.8vw, 2rem);
+}
+.app-shell--exhibition .explore-grid-item { width: 100%; }
+.app-shell--exhibition .explore-grid-item img { display: block; width: 100%; }
+.app-shell--exhibition .explore-grid-item > div { opacity: 1; padding: 1.1rem; }
+.app-shell--exhibition .explore-grid-item > div p {
+  padding: 0.45rem 0.75rem;
+  color: white;
+  background: rgba(14, 14, 26, 0.7);
+  border-radius: 999px;
+  font-size: clamp(0.7rem, 0.9vw, 0.9rem);
+}
+
+@keyframes exhibition-category-enter {
+  from { opacity: 0.25; }
+  to { opacity: 1; }
+}
+
+.app-shell--exhibition-active .explore-grid { animation: exhibition-category-enter 800ms ease-out both; }
+
+@media (max-width: 767px) {
+  .app-shell--exhibition { --exhibition-header-height: clamp(4rem, 7.6vw, 4.7rem); }
+  .app-shell--exhibition .app-main--explore { padding: 4.8rem 0.75rem 2rem; }
+  .app-shell--exhibition .category-pill { min-height: 2.7rem; padding: 0.55rem 0.85rem; }
 }

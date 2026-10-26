@@ -26,7 +26,7 @@ if (!Array.isArray(parsedCatalog) || !parsedCatalog.every(isExploreReference)) {
 }
 
 const catalog = parsedCatalog as ExploreReference[];
-const MAX_REFERENCE_IMAGES = 2;
+const MAX_REFERENCE_IMAGES = 1;
 const CATEGORY_ALIASES: Record<string, string[]> = {
   Boho: ['boho', 'bohemio', 'bohemia'],
   Y2K: ['y2k', 'dosmilero', 'dosmilera', 'años 2000'],

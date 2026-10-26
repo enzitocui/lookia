@@ -7,7 +7,7 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "server": "tsx server/index.ts",
     "build": "vite build",
-    "test": "node --import tsx --test server/services/*.test.ts",
+    "test": "node --import tsx --test server/services/*.test.ts server/auth/*.test.ts src/services/*.test.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",

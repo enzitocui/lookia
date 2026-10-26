@@ -68,7 +68,6 @@ export interface ExploreReferenceImage {
 
 export interface GeneratedOutfit {
   garments: OutfitGarmentCard[];
-  complementaryItems: OutfitGarmentCard[];
   referenceImages: ExploreReferenceImage[];
   referenceMessage?: string;
   evaluation: string | null;

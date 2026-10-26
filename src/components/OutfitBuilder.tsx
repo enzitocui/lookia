@@ -208,7 +208,6 @@ function OutfitResultView({
           <GarmentSection title="Prendas seleccionadas" garments={result.garments} emptyMessage={result.wardrobeMessage || 'No se encontraron prendas compatibles.'} className="outfit-result-garments" />
           <ExploreReferencesSection
             references={result.referenceImages}
-            complementaryItems={result.complementaryItems}
             emptyMessage={result.referenceMessage}
           />
           <OutfitEvaluation evaluation={result.evaluation} wardrobeMessage={result.wardrobeMessage} />
@@ -270,26 +269,18 @@ function OutfitGarmentCard({ garment }: { garment: OutfitGarmentCard }) {
 
 function ExploreReferencesSection({
   references,
-  complementaryItems,
   emptyMessage,
 }: {
   references: ExploreReferenceImage[];
-  complementaryItems: OutfitGarmentCard[];
   emptyMessage?: string;
 }) {
   return (
-    <section className="outfit-result-column outfit-result-complementary panel">
+    <section className="outfit-result-column outfit-result-reference panel">
       <h4><ImageIcon size={18} /> Referencias de Explorar</h4>
       <div className="outfit-reference-list">
         {references.length > 0
           ? references.map(reference => <ExploreReferenceCard key={reference.id} reference={reference} />)
           : <p className="outfit-empty-wardrobe">{emptyMessage || 'No se utilizaron imágenes de referencia de Explorar para esta combinación.'}</p>}
-      </div>
-      <h5 className="outfit-reference-complements-title">Complementos de tu ropero</h5>
-      <div className="outfit-garment-list">
-        {complementaryItems.length > 0
-          ? complementaryItems.map(garment => <OutfitGarmentCard key={garment.id} garment={garment} />)
-          : <p className="outfit-empty-wardrobe">No hay prendas opcionales del ropero para sugerir.</p>}
       </div>
     </section>
   );

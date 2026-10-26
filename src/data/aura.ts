@@ -5,20 +5,9 @@ export type AuraItem = {
   description: 'AURA Outfit';
 };
 
-const auraAssets = import.meta.glob<string>('../assets/aura/*.png', {
-  eager: true,
-  import: 'default',
-  query: '?url'
-});
-
-export const auraItems: AuraItem[] = Object.entries(auraAssets)
-  .sort(([firstPath], [secondPath]) => firstPath.localeCompare(secondPath))
-  .map(([assetPath, url]) => {
-    const fileName = assetPath.split('/').pop()?.replace(/\.png$/i, '') ?? assetPath;
-    return {
-      id: fileName,
-      category: 'AURA',
-      url,
-      description: 'AURA Outfit'
-    };
-  });
+export const auraItems: AuraItem[] = [1, 2, 3, 4].map(index => ({
+  id: `aura_${index}`,
+  category: 'AURA',
+  url: `/aura/aura_${index}.jpg`,
+  description: 'AURA Outfit'
+}));

@@ -112,6 +112,35 @@ test('advances after the category timer without waiting for the scroll to reach 
   assert.equal(scheduler.frames.size, 0);
 });
 
+test('uses the full category duration to scroll AURA smoothly to the bottom', async () => {
+  const scheduler = new FakeScheduler();
+  let scrollTop = 0;
+  const cycle = createExhibitionCycle({
+    categories: ['AURA', 'Boho'],
+    getScrollTop: () => scrollTop,
+    getMaxScroll: () => 800,
+    setCategory: () => {},
+    setScrollTop: value => { scrollTop = value; },
+    waitForContent: async () => true,
+    onCategoryStart: () => {},
+    onStop: () => {},
+    categoryDurationMs: 20000,
+    scrollDurationForCategory: category => category === 'AURA' ? 20000 : undefined,
+    scheduler,
+  });
+
+  cycle.start();
+  await Promise.resolve();
+  scheduler.runFrame(0);
+  scheduler.runFrame(10000);
+  assert.equal(scrollTop, 400);
+  scheduler.runFrame(20000);
+  assert.equal(scrollTop, 800);
+  assert.equal(scheduler.frames.size, 0);
+  assert.equal([...scheduler.timers.values()][0]?.delay, 20000);
+  cycle.stop();
+});
+
 test('STOP cancels the scroll frame and pending category timer and restores theme once', async () => {
   const scheduler = new FakeScheduler();
   let restoredTheme = '';

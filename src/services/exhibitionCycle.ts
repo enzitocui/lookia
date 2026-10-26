@@ -16,6 +16,7 @@ export type ExhibitionCycleOptions<Category> = {
   onStop: () => void;
   pixelsPerSecond?: number;
   categoryDurationMs?: number;
+  scrollDurationForCategory?: (category: Category) => number | undefined;
   scheduler?: ExhibitionScheduler;
 };
 
@@ -37,6 +38,7 @@ export const createExhibitionCycle = <Category,>({
   onStop,
   pixelsPerSecond = 24,
   categoryDurationMs = 20000,
+  scrollDurationForCategory,
   scheduler = browserScheduler,
 }: ExhibitionCycleOptions<Category>) => {
   let running = false;
@@ -52,7 +54,27 @@ export const createExhibitionCycle = <Category,>({
     }, delay);
   };
 
-  const scrollCategory = () => {
+  const scrollCategory = (category: Category) => {
+    const durationMs = scrollDurationForCategory?.(category);
+    if (durationMs !== undefined) {
+      let startTimestamp: number | null = null;
+      const startPosition = getScrollTop();
+      const animate = (timestamp: number) => {
+        if (!running) return;
+        if (startTimestamp === null) startTimestamp = timestamp;
+        const progress = Math.min(1, Math.max(0, (timestamp - startTimestamp) / Math.max(1, durationMs)));
+        const maxScroll = Math.max(0, getMaxScroll());
+        setScrollTop(startPosition + (maxScroll - startPosition) * progress);
+        if (progress < 1) {
+          frameId = scheduler.requestFrame(animate);
+        } else {
+          frameId = null;
+        }
+      };
+      frameId = scheduler.requestFrame(animate);
+      return;
+    }
+
     let lastTimestamp: number | null = null;
     let position = getScrollTop();
     const animate = (timestamp: number) => {
@@ -96,7 +118,7 @@ export const createExhibitionCycle = <Category,>({
     }
     onCategoryStart();
     scheduleCategory((index + 1) % categories.length, categoryDurationMs);
-    scrollCategory();
+    scrollCategory(category);
   };
 
   return {

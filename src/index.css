@@ -149,6 +149,10 @@
 }
 
 .app-shell {
+  --app-header-height: max(
+    clamp(4.25rem, 6.6vw, 5.25rem),
+    calc(clamp(2.2rem, 5vw, 3.35rem) * 0.95 + 2 * clamp(0.95rem, 1.7vw, 1.2rem) + 1px)
+  );
   background-color: var(--background);
   color: var(--text);
 }
@@ -159,10 +163,9 @@
 }
 
 .app-bar {
-  background-color: rgba(var(--background-rgb), 0.82);
+  background-color: var(--background);
   border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(18px);
-  min-height: clamp(4.25rem, 6.6vw, 5.25rem);
+  min-height: var(--app-header-height);
   padding-block: clamp(0.95rem, 1.7vw, 1.2rem);
 }
 
@@ -963,6 +966,35 @@ input, textarea, select, button {
   width: 100%;
   margin-bottom: 1.25rem;
   break-inside: avoid;
+}
+
+.explore-grid--aura {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: clamp(36rem, 78vh, 64rem);
+  column-width: auto;
+  gap: clamp(0.75rem, 1.5vw, 1.5rem);
+}
+
+.explore-grid--aura .explore-grid-item {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+.explore-grid--aura .explore-grid-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  background: var(--background-alt);
+}
+
+@media (max-width: 640px) {
+  .explore-grid--aura {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: clamp(32rem, 72vh, 52rem);
+  }
 }
 
 .explore-status {
@@ -2052,6 +2084,13 @@ input, textarea, select, button {
 
 /* Global layout refinements: keep content widths and fixed chrome predictable. */
 .app-main { min-width: 0; width: 100%; }
+.app-main--explore { padding-top: var(--app-header-height); }
+.app-main--explore .category-nav {
+  position: sticky;
+  top: var(--app-header-height);
+  z-index: 40;
+  background: var(--background);
+}
 .app-shell { min-width: 0; overflow-x: clip; }
 .wardrobe-page { min-width: 0; }
 .wardrobe-heading > div { min-width: 0; }
@@ -2062,7 +2101,8 @@ input, textarea, select, button {
 
 @media (max-width: 640px) {
   .section-label { font-size: 0.66rem; letter-spacing: 0.18em; }
-  .app-bar { min-height: 3.6rem; padding-block: 0.4rem; }
+  .app-shell { --app-header-height: 3.6rem; }
+  .app-bar { min-height: var(--app-header-height); padding-block: 0.4rem; }
   .app-header-logo { font-size: 1.7rem; }
   .app-bar .icon-button { min-width: 2.6rem; min-height: 2.6rem; }
   .sidebar-panel { padding: 0.75rem 0.8rem 1rem; }
@@ -2303,11 +2343,10 @@ input, textarea, select, button {
 }
 
 .app-shell--exhibition .category-nav { margin-bottom: clamp(1.4rem, 3vh, 2.5rem); }
-.app-shell--exhibition .category-nav-button { display: none; }
 .app-shell--exhibition .categories-row {
-  justify-content: center;
-  flex-wrap: wrap;
-  overflow: hidden;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: clamp(0.55rem, 1vw, 1rem);
 }
 .app-shell--exhibition .category-pill {
@@ -2317,9 +2356,11 @@ input, textarea, select, button {
 }
 
 .app-shell--exhibition .explore-grid-item { margin-bottom: clamp(1rem, 1.8vw, 2rem); }
-.app-shell--exhibition .explore-grid {
-  column-width: clamp(19rem, 24vw, 30rem);
-  column-gap: clamp(1rem, 1.8vw, 2rem);
+.app-shell--exhibition .explore-grid { column-gap: clamp(1rem, 1.8vw, 2rem); }
+.app-shell--exhibition .explore-grid--aura .explore-grid-item { margin-bottom: 0; }
+.app-shell--exhibition .explore-grid--aura .explore-grid-item img {
+  height: 100%;
+  object-fit: fill;
 }
 .app-shell--exhibition .explore-grid-item { width: 100%; }
 .app-shell--exhibition .explore-grid-item img { display: block; width: 100%; }
@@ -2338,6 +2379,13 @@ input, textarea, select, button {
 }
 
 .app-shell--exhibition-active .explore-grid { animation: exhibition-category-enter 800ms ease-out both; }
+
+@media (min-width: 768px) {
+  .app-shell--exhibition .explore-grid {
+    column-count: 4;
+    column-width: auto;
+  }
+}
 
 @media (max-width: 767px) {
   .app-shell--exhibition { --exhibition-header-height: clamp(4rem, 7.6vw, 4.7rem); }

@@ -314,6 +314,7 @@ export default function App() {
         setTheme(previous => previous === 'dark' ? 'light' : 'dark');
       },
       categoryDurationMs: 20000,
+      scrollDurationForCategory: category => category === 'AURA' ? 20000 : undefined,
       onStop: () => {
         const originalTheme = exhibitionOriginalThemeRef.current;
         if (originalTheme) setTheme(originalTheme);
@@ -1075,7 +1076,7 @@ export default function App() {
         </div>
       </aside>
 
-      <div className={`min-h-screen transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${isExhibitionAccount ? '' : menuOpen ? 'translate-x-[min(18rem,80vw)]' : 'translate-x-0'}`}>
+      <div className={`min-h-screen transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${!isExhibitionAccount && menuOpen ? 'translate-x-[min(18rem,80vw)]' : ''}`}>
         <header className="app-bar fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 flex items-center justify-center">
           {!isExhibitionAccount && <div className="absolute left-4 sm:left-6">
             <button
@@ -1487,7 +1488,7 @@ export default function App() {
                 )}
               </div>
 
-              <div key={activeCategory} className="explore-grid" data-explore-category={activeCategory}>
+              <div key={activeCategory} className={`explore-grid ${activeCategory === 'AURA' ? 'explore-grid--aura' : ''}`} data-explore-category={activeCategory}>
                 <AnimatePresence mode="popLayout">
                   {filteredItems.map((item, idx) => (
                     <motion.div

@@ -2,7 +2,15 @@ import { Router } from 'express';
 import { sql } from '../db.ts';
 import { requireAuth } from '../auth/requireAuth.ts';
 import { OutfitGenerationError, requestOutfitFromNim, type WardrobeMetadata } from '../services/nvidiaNim.ts';
-import { parseOutfitRecommendation, validateOutfitRecommendation } from '../services/outfitValidation.ts';
+import {
+  categoryName,
+  completeOutfitRecommendation,
+  createFallbackOutfitRecommendation,
+  missingRequiredCategories,
+  resolveOutfitRecommendation,
+  validateOutfitRecommendation,
+  type OutfitRecommendation,
+} from '../services/outfitValidation.ts';
 import { selectExploreReferences } from '../services/exploreReferences.ts';
 import { validateSavedOutfitInput } from '../services/savedOutfitValidation.ts';
 
@@ -163,12 +171,12 @@ router.post('/generate', requireAuth, async (req, res) => {
       color: String(garment.color ?? ''),
       foto: String(garment.foto ?? ''),
     })).filter(garment => Number.isSafeInteger(garment.id_prendas) && garment.id_prendas > 0);
-
-    const wardrobeIds = new Set(wardrobe.map(garment => garment.id_prendas));
-    const previousGarmentIds = rawPreviousIds as number[];
-    if (previousGarmentIds.some(id => !wardrobeIds.has(id))) {
-      return res.status(400).json({ error: 'La selección anterior contiene prendas que no están en tu ropero.' });
-    }
+    const wardrobeById = new Map(wardrobe.map(garment => [garment.id_prendas, garment]));
+    const previousPrimaryGarmentIds = (rawPreviousIds as number[])
+      .map(id => wardrobeById.get(id))
+      .filter((garment): garment is WardrobeGarment => Boolean(garment))
+      .filter(garment => ['superior', 'inferior', 'calzado'].includes(categoryName(garment.tipo)))
+      .map(garment => garment.id_prendas);
 
     if (!wardrobe.length) {
       return res.json({
@@ -187,20 +195,52 @@ router.post('/generate', requireAuth, async (req, res) => {
       request.trim(),
       typeof req.body?.exploreCategory === 'string' ? req.body.exploreCategory : undefined,
     );
-    const modelResponse = await requestOutfitFromNim(
-      request.trim(),
-      wardrobe.map(({ id_prendas, tipo, sub_tipo, color }) => ({ id_prendas, tipo, sub_tipo, color })),
-      previousGarmentIds,
-      references,
-    );
-    const referencesSent = modelResponse.referencesIncluded ? references : [];
-    const recommendation = validateOutfitRecommendation(
-      request.trim(),
-      wardrobe,
-      parseOutfitRecommendation(modelResponse.content),
-      referencesSent,
-    );
-    const wardrobeById = new Map(wardrobe.map(garment => [garment.id_prendas, garment]));
+    let referencesSent = references;
+    let recommendation: OutfitRecommendation;
+    try {
+      const modelResponse = await requestOutfitFromNim(
+        request.trim(),
+        wardrobe.map(({ id_prendas, tipo, sub_tipo, color }) => ({ id_prendas, tipo, sub_tipo, color })),
+        references,
+        previousPrimaryGarmentIds,
+      );
+      referencesSent = modelResponse.referencesIncluded ? references : [];
+      recommendation = resolveOutfitRecommendation(
+        request.trim(),
+        wardrobe,
+        modelResponse.content,
+        references,
+        referencesSent,
+        previousPrimaryGarmentIds,
+      );
+      if (recommendation.usedReferenceIds.length > 0) referencesSent = references;
+    } catch (error) {
+      if (!(error instanceof OutfitGenerationError)) throw error;
+      console.warn('NVIDIA outfit response could not be used; selecting a wardrobe-based fallback.', {
+        status: error.status,
+      });
+      recommendation = createFallbackOutfitRecommendation(
+        request.trim(),
+        wardrobe,
+        references,
+        previousPrimaryGarmentIds,
+      );
+      if (recommendation.selectedGarmentIds.length) {
+        recommendation = validateOutfitRecommendation(
+          request.trim(),
+          wardrobe,
+          completeOutfitRecommendation(
+            request.trim(),
+            wardrobe,
+            recommendation,
+            references,
+            previousPrimaryGarmentIds,
+          ),
+          references,
+        );
+      }
+      referencesSent = references;
+    }
     const toClientGarment = (id: number) => {
       const garment = wardrobeById.get(id)!;
       return {
@@ -213,6 +253,7 @@ router.post('/generate', requireAuth, async (req, res) => {
     };
     const garments = recommendation.selectedGarmentIds.map(toClientGarment);
     const complementaryItems = recommendation.complementaryGarmentIds.map(toClientGarment);
+    const missingCategories = missingRequiredCategories(wardrobe, recommendation, request.trim());
     const referencesById = new Map(referencesSent.map(reference => [reference.id, reference]));
     const referenceImages = recommendation.usedReferenceIds.map(id => referencesById.get(id)!);
 
@@ -224,8 +265,13 @@ router.post('/generate', requireAuth, async (req, res) => {
         ? undefined
         : 'No se utilizaron imágenes de referencia de Explorar para esta combinación.',
       evaluation: recommendation.evaluation,
+      ...(missingCategories.length ? {
+        wardrobeMessage: `No se puede completar el outfit: faltan estas categorías obligatorias disponibles y compatibles con tus restricciones: ${missingCategories.join(', ')}.`,
+      } : {}),
       ...(garments.length === 0 ? {
-        wardrobeMessage: 'No encontramos una combinación que cumpla tu pedido con las prendas disponibles.',
+        wardrobeMessage: missingCategories.length
+          ? `No se puede completar el outfit: faltan estas categorías obligatorias disponibles y compatibles con tus restricciones: ${missingCategories.join(', ')}.`
+          : 'No encontramos una combinación que cumpla tu pedido con las prendas disponibles.',
       } : {}),
     });
   } catch (error) {

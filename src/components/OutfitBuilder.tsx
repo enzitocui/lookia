@@ -312,6 +312,7 @@ function OutfitEvaluation({ evaluation, wardrobeMessage }: { evaluation: string 
     <section className="outfit-result-column outfit-explanation panel">
       <h4><Lightbulb size={18} /> Evaluación del outfit</h4>
       <div className="outfit-copy-section outfit-evaluation-copy">
+        {evaluation && wardrobeMessage && <p role="status">{wardrobeMessage}</p>}
         {evaluation
           ? <p>{evaluation}</p>
           : <p>{wardrobeMessage || 'La IA no pudo evaluar esta combinación. Podés intentarlo nuevamente.'}</p>}

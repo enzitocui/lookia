@@ -7,6 +7,8 @@ import {
   requestOutfitFromNim,
 } from './nvidiaNim.ts';
 import type { ExploreReference } from './exploreReferences.ts';
+import { selectExploreReferences } from './exploreReferences.ts';
+import { resolveOutfitRecommendation } from './outfitValidation.ts';
 
 const wardrobe = [{ id_prendas: 1, tipo: 'Superior', sub_tipo: 'Remera', color: 'Negro' }];
 const references: ExploreReference[] = [{
@@ -32,7 +34,7 @@ test('uses the configured NVIDIA NIM endpoint and sends selected Explore referen
   };
 
   try {
-    const response = await requestOutfitFromNim('Una combinación casual', wardrobe, [], references);
+    const response = await requestOutfitFromNim('Una combinación casual', wardrobe, references, [1]);
     assert.equal(response.content, '{"selectedGarmentIds":[],"complementaryGarmentIds":[],"usedReferenceIds":[],"evaluation":"No hay prendas disponibles."}');
     assert.equal(response.referencesIncluded, true);
     assert.equal(requestUrl, NVIDIA_NIM_ENDPOINT);
@@ -54,11 +56,15 @@ test('uses the configured NVIDIA NIM endpoint and sends selected Explore referen
     assert.ok(context?.includes('Una combinación casual'));
     assert.ok(context?.includes('referenciasDeExplorarDisponibles'));
     assert.ok(context?.includes('Remera'));
-    assert.match(payload.messages[0].content, /entre una y cuatro prendas/);
+    assert.ok(context?.includes('"prendasPrincipalesAnterioresParaEvitarSiHayAlternativas":[1]'));
+    assert.match(payload.messages[0].content, /entre tres y cuatro prendas/);
     assert.match(payload.messages[0].content, /accesorios son opcionales/);
     assert.match(payload.messages[0].content, /evaluación/);
     assert.match(payload.messages[0].content, /Nunca incluyas IDs/);
     assert.match(payload.messages[0].content, /imagen de referencia solo orienta y no demuestra/);
+    assert.match(payload.messages[0].content, /el estilo solicitado debe influir en los IDs seleccionados/);
+    assert.match(payload.messages[0].content, /al menos una prenda de categoría Superior, una de Inferior y una de Calzado/);
+    assert.match(payload.messages[0].content, /No rechaces ni devuelvas una selección vacía solo porque falten prendas ideales/);
   } finally {
     globalThis.fetch = previousFetch;
     if (previousKey === undefined) delete process.env.NVIDIA_NIM_API_KEY;
@@ -79,13 +85,97 @@ test('does not send an image when no Explore reference candidate exists', async 
   };
 
   try {
-    const response = await requestOutfitFromNim('Quiero un conjunto', wardrobe, [], []);
+    const response = await requestOutfitFromNim('Quiero un conjunto', wardrobe, []);
     assert.equal(response.referencesIncluded, false);
     const payload = JSON.parse(String(requestInit?.body)) as {
       messages: Array<{ content: string | Array<{ type: string }> }>;
     };
     const userContent = payload.messages[1].content as Array<{ type: string }>;
     assert.ok(!userContent.some(part => part.type === 'image_url'));
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousKey === undefined) delete process.env.NVIDIA_NIM_API_KEY;
+    else process.env.NVIDIA_NIM_API_KEY = previousKey;
+  }
+});
+
+test('generates independent Y2K, Boho, and Casual selections from each request and its reference', async () => {
+  const previousKey = process.env.NVIDIA_NIM_API_KEY;
+  const previousFetch = globalThis.fetch;
+  process.env.NVIDIA_NIM_API_KEY = 'test-key';
+  const requests: RequestInit[] = [];
+  const wardrobe = [
+    { id_prendas: 1, tipo: 'Superior', sub_tipo: 'Remera', color: 'Negro' },
+    { id_prendas: 2, tipo: 'Inferior', sub_tipo: 'Jean', color: 'Azul' },
+    { id_prendas: 3, tipo: 'Superior', sub_tipo: 'Blusa', color: 'Blanco' },
+    { id_prendas: 4, tipo: 'Inferior', sub_tipo: 'Pantalon', color: 'Beige' },
+    { id_prendas: 5, tipo: 'Calzado', sub_tipo: 'Zapatillas', color: 'Blanco' },
+  ];
+  const requestsToGenerate = [
+    {
+      request: 'Outfit Y2K',
+      reference: selectExploreReferences('Outfit Y2K', undefined)[0],
+      selectedIds: [1, 2],
+      evaluation: 'La remera negra y el jean azul forman una combinación Y2K.',
+    },
+    {
+      request: 'Outfit Boho',
+      reference: selectExploreReferences('Outfit Boho', undefined)[0],
+      selectedIds: [3, 4],
+      evaluation: 'La blusa blanca y el pantalon beige aportan una combinación Boho.',
+    },
+    {
+      request: 'Outfit Casual',
+      reference: selectExploreReferences('Outfit Casual', undefined)[0],
+      selectedIds: [1, 4],
+      evaluation: 'La remera negra y el pantalon beige forman una combinación casual.',
+    },
+  ];
+  assert.ok(requestsToGenerate.every(generation => generation.reference));
+  let generationIndex = 0;
+  globalThis.fetch = async (_input, init) => {
+    requests.push(init ?? {});
+    const generation = requestsToGenerate[generationIndex++];
+    return new Response(JSON.stringify({
+      choices: [{
+        message: {
+          content: JSON.stringify({
+            selectedGarmentIds: generation.selectedIds,
+            complementaryGarmentIds: [],
+            usedReferenceIds: [generation.reference.id],
+            evaluation: generation.evaluation,
+          }),
+        },
+      }],
+    }), { status: 200 });
+  };
+
+  try {
+    for (const generation of requestsToGenerate) {
+      const response = await requestOutfitFromNim(generation.request, wardrobe, [generation.reference]);
+      const recommendation = resolveOutfitRecommendation(
+        generation.request,
+        wardrobe,
+        response.content,
+        [generation.reference],
+        [generation.reference],
+      );
+      assert.ok(generation.selectedIds.every(id => recommendation.selectedGarmentIds.includes(id)));
+      assert.ok(recommendation.selectedGarmentIds.length >= 3);
+      assert.deepEqual(recommendation.usedReferenceIds, [generation.reference.id]);
+
+      const payload = JSON.parse(String(requests.at(-1)?.body)) as {
+        messages: Array<{ role: string; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> }>;
+      };
+      const content = payload.messages[1].content as Array<{ type: string; text?: string; image_url?: { url: string } }>;
+      const context = content.find(part => part.type === 'text')?.text ?? '';
+      assert.ok(context.includes(`"solicitudOriginal":"${generation.request}"`));
+      assert.ok(context.includes(`"categoria":"${generation.reference.category}"`));
+      assert.ok(content.some(part => part.type === 'image_url' && part.image_url?.url === generation.reference.url));
+      assert.ok(!context.includes('seleccionAnterior'));
+    }
+
+    assert.equal(requests.length, 3);
   } finally {
     globalThis.fetch = previousFetch;
     if (previousKey === undefined) delete process.env.NVIDIA_NIM_API_KEY;
@@ -109,7 +199,7 @@ test('retries a rejected image request without references and marks them unavail
   };
 
   try {
-    const response = await requestOutfitFromNim('Una combinación casual', wardrobe, [], references);
+    const response = await requestOutfitFromNim('Una combinación casual', wardrobe, references);
     assert.equal(response.referencesIncluded, false);
     assert.equal(requests.length, 2);
     const firstPayload = JSON.parse(String(requests[0].body)) as {
@@ -142,7 +232,7 @@ test('maps a 400 response without references to a safe gateway error and logs sa
 
   try {
     await assert.rejects(
-      requestOutfitFromNim('Una combinación casual', wardrobe, [], []),
+      requestOutfitFromNim('Una combinación casual', wardrobe, []),
       (error: unknown) => error instanceof OutfitGenerationError
         && error.status === 502
         && error.message === 'No pudimos generar el outfit. Intentá nuevamente.',
@@ -167,7 +257,7 @@ test('returns a safe configuration error when the server key is missing', async 
   delete process.env.NVIDIA_NIM_API_KEY;
   try {
     await assert.rejects(
-      requestOutfitFromNim('Una combinación casual', wardrobe, [], []),
+      requestOutfitFromNim('Una combinación casual', wardrobe, []),
       (error: unknown) => error instanceof OutfitGenerationError && error.status === 503,
     );
   } finally {
@@ -185,7 +275,7 @@ test('maps an aborted NVIDIA request to a safe gateway timeout', async () => {
 
   try {
     await assert.rejects(
-      requestOutfitFromNim('Una combinación casual', wardrobe, [], []),
+      requestOutfitFromNim('Una combinación casual', wardrobe, []),
       (error: unknown) => error instanceof OutfitGenerationError
         && error.status === 504
         && error.message === 'La generación tardó demasiado. Intentá nuevamente.',
@@ -205,7 +295,7 @@ test('handles NVIDIA authentication and usage-limit responses without exposing p
     for (const [providerStatus, expectedStatus] of [[401, 503], [429, 429]]) {
       globalThis.fetch = async () => new Response('', { status: providerStatus });
       await assert.rejects(
-        requestOutfitFromNim('Una combinación casual', wardrobe, [], []),
+        requestOutfitFromNim('Una combinación casual', wardrobe, []),
         (error: unknown) => error instanceof OutfitGenerationError
           && error.status === expectedStatus
           && !error.message.includes('test-key'),
